@@ -1,0 +1,20 @@
+theme = "github_dark"
+tab_width = 4
+
+editor = {
+	line-number = "relative"
+	cursorline = true
+	true-color = true
+
+	cursor-shape = {
+		insert = "bar"
+		normal = "block"
+		select = "block"	
+	}
+}
+
+languages = {
+	python =  {
+		language-serves = ["pyright"]
+	}
+}
