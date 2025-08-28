@@ -20,10 +20,14 @@ enum raon_token_type {
   raon_token_type_equal,
   raon_token_type_block_open,
   raon_token_type_block_close,
+  // used to indicate that an error ocurred
+  raon_token_type_error,
+
 };
 
 struct raon_token {
-  size_t x, y;
+  size_t from_x, from_y;
+  size_t to_x, to_y;
   enum raon_token_type type;
 
   union {
@@ -91,6 +95,7 @@ static void raon_lexer_eat(struct raon_lexer *lex) {
   if (next_idx >= lex->str_len) {
     return;
   }
+  lex->curr_idx = next_idx;
   char next_tok = lex->str[next_idx];
   if (next_tok == '\n') {
     ++lex->curr_y;
@@ -100,14 +105,114 @@ static void raon_lexer_eat(struct raon_lexer *lex) {
   }
 }
 
-void raon_lexer_lex(struct raon_lexer *lex) {
-  for (;;) {
-    if (isspace(raon_lexer_peek(lex))) {
-      continue;
-    }
-
-    // TODO: lex text here
+// TODO: change parsing to count length and then strncpy like the other lex
+// functions
+static struct raon_token raon_lexer_lex_number(struct raon_lexer *lex) {
+  if (!isdigit(raon_lexer_peek(lex))) {
+    return (struct raon_token){.type = raon_token_type_error};
   }
+  raon_lexer_eat(lex);
+
+  struct raon_token tok = {
+      .from_x = lex->curr_x,
+      .from_y = lex->curr_y,
+      .type = raon_token_type_int,
+  };
+
+  size_t str_start_idx = lex->curr_idx;
+  size_t str_len = 0;
+  for (;;) {
+    char c = raon_lexer_peek(lex);
+    if (!isdigit(c)) {
+      break;
+    }
+    raon_lexer_eat(lex);
+    ++str_len;
+  }
+  tok.to_x = lex->curr_x;
+  tok.to_y = lex->curr_y;
+
+  char *num = raon_malloc(str_len * sizeof(char));
+  if (!num) {
+    return (struct raon_token){.type = raon_token_type_error};
+  }
+  strncpy(num, &lex->str[str_start_idx], str_len);
+  // TODO: handle error on strtoll
+  tok.int_val = strtoll(num, NULL, 10);
+  raon_free(num);
+  return tok;
+}
+
+static struct raon_token raon_lexer_lex_string(struct raon_lexer *lex) {
+  if (raon_lexer_peek(lex) != '"') {
+    return (struct raon_token){.type = raon_token_type_error};
+  }
+  raon_lexer_eat(lex);
+  size_t str_start_idx = lex->curr_idx;
+
+  struct raon_token tok = {
+      .from_x = lex->curr_x,
+      .from_y = lex->curr_y,
+      .type = raon_token_type_string,
+  };
+
+  size_t str_len = 0;
+  for (;;) {
+    char c = raon_lexer_peek(lex);
+    if (c == '"') {
+      break;
+    }
+    ++str_len;
+  }
+  tok.string_val = raon_malloc(str_len);
+  if (!tok.string_val) {
+    return (struct raon_token){.type = raon_token_type_error};
+  }
+  strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
+  return tok;
+}
+
+// lexes bools and fields
+static struct raon_token raon_lexer_lex_ident(struct raon_lexer *lex) {
+  if (!isalpha(raon_lexer_peek(lex))) {
+    return (struct raon_token){.type = raon_token_type_error};
+  }
+
+  struct raon_token tok = {
+      .from_x = lex->curr_x,
+      .from_y = lex->curr_y,
+  };
+
+  size_t str_start_idx = lex->curr_idx;
+  size_t str_len = 0;
+
+  for (;;) {
+    char c = raon_lexer_peek(lex);
+    if (c != '_' && c != '-' && !isalnum(c)) {
+      break;
+    }
+    raon_lexer_eat(lex);
+    ++str_len;
+  }
+  tok.to_x = lex->curr_x;
+  tok.to_y = lex->curr_y;
+
+  tok.string_val = raon_malloc(str_len);
+  if (!tok.string_val) {
+    return (struct raon_token){.type = raon_token_type_error};
+  }
+  strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
+
+  if (strcmp(tok.string_val, "true") || strcmp(tok.string_val, "false")) {
+    tok.type = raon_token_type_bool;
+  } else {
+    tok.type = raon_token_type_field;
+  }
+  return tok;
+}
+
+void raon_lexer_lex(struct raon_lexer *lex) {
+  // TODO
 }
 
 int main(void) {
