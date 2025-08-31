@@ -1,0 +1,7 @@
+﻿---
+BasedOnStyle: WebKit
+BreakBeforeBraces: Attach
+ColumnLimit: 100
+IndentWidth: 3
+IndentPPDirectives: BeforeHash
+...
