@@ -1,5 +1,5 @@
 ```py
-entry = ({field} "=" {value} "\n")*
+entry = ({field} "=" {value} ("," | "\n"))*
 block = "{" {entry}* "}" 
 field = [A-z | 0-9 | "-" | "_"]*
 value = {string} | {bool} | {int} | {block}

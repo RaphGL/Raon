@@ -18,6 +18,7 @@ enum raon_token_type {
    raon_token_type_block_open,
    raon_token_type_block_close,
    raon_token_type_newline,
+   raon_token_type_comma,
    // value types
    raon_token_type_string,
    raon_token_type_bool,
@@ -69,10 +70,11 @@ struct raon_lexer raon_lexer_init_from_file(FILE* file) {
    size_t len = ftell(file);
    fseek(file, 0, SEEK_SET);
 
-   char* str = raon_malloc(len);
+   char* str = raon_malloc(len + 1);
    if (str) {
       fread(str, 1, len, file);
    }
+   str[len] = '\0';
    fclose(file);
 
    return (struct raon_lexer) { .str = str, .str_len = strlen(str) };
@@ -356,6 +358,13 @@ struct raon_token_vec* raon_lexer_lex(struct raon_lexer* lex, size_t* token_len)
       if (c == '}') {
          raon_lexer_eat(lex);
          curr_token = RAON_ONE_CHAR_TOKEN('}', raon_token_type_block_close);
+         raon_token_vec_push(token_vec, curr_token);
+         continue;
+      }
+
+      if (c == ',') {
+         raon_lexer_eat(lex);
+         curr_token = RAON_ONE_CHAR_TOKEN(',', raon_token_type_comma);
          raon_token_vec_push(token_vec, curr_token);
          continue;
       }

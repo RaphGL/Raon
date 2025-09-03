@@ -1,5 +1,5 @@
 theme = "github_dark"
-tab_width = 4
+tab_width = { spaces = 4,  convert-to-space = true }
 
 editor = {
 	line-number = "relative"
@@ -14,7 +14,5 @@ editor = {
 }
 
 languages = {
-	python =  {
-		language-serves = ["pyright"]
-	}
+	python =  { language-server = "pyright" }
 }
