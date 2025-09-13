@@ -24,7 +24,7 @@ struct raon_token {
    enum raon_token_type type;
 
    union {
-      char* string_val;
+      char *string_val;
       int int_val;
       char char_val;
       bool bool_val;
@@ -35,40 +35,35 @@ struct raon_lexer {
    bool start;
    size_t curr_idx;
    size_t curr_x, curr_y;
-   char* str;
+   char *str;
    size_t str_len;
 };
 
 struct raon_parser {
    size_t curr_idx;
-   struct raon_token_vec* tokens;
-};
-
-struct raon_parser_block {
-   size_t len;
-   size_t cap;
-   struct raon_parser_entry* entries;
+   struct raon_token_vec *tokens;
 };
 
 struct raon_parser_entry {
-   char* field;
+   char *field;
    enum raon_token_type value_type;
    union {
-      char* string_val;
+      char *string_val;
       int int_val;
       bool bool_val;
-      struct raon_parser_block block_val;
+      struct raon_parser_vec *block_val;
    };
 };
 
 // INTENDED PUBLIC API
 
-struct raon_lexer raon_lexer_init_from_str(char* str);
-struct raon_lexer raon_lexer_init_from_file(FILE* file);
-struct raon_token_vec* raon_lexer_lex(struct raon_lexer* lex, size_t* token_len);
-void raon_lexer_free(struct raon_lexer* lex);
+struct raon_lexer raon_lexer_init_from_str(char *str);
+struct raon_lexer raon_lexer_init_from_file(char *filepath);
+struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex);
+void raon_lexer_free(struct raon_lexer *lex);
 
-struct raon_parser raon_parser_init(struct raon_token_vec* tokens);
+struct raon_parser raon_parser_init(struct raon_token_vec *tokens);
+struct raon_parser_vec *raon_parser_parse(struct raon_parser *parser);
 
 struct raon_token_vec;
 struct raon_parser_vec;
@@ -77,14 +72,14 @@ void raon_token_vec_free(struct raon_token_vec *vec);
 void raon_parser_vec_free(struct raon_parser_vec *vec);
 
 // MOSTLY USED INTERNALLY
-char raon_lexer_peek(struct raon_lexer* lex);
-void raon_lexer_eat(struct raon_lexer* lex);
-struct raon_token raon_lexer_lex_number(struct raon_lexer* lex);
-struct raon_token raon_lexer_lex_string(struct raon_lexer* lex);
-struct raon_token raon_lexer_lex_ident(struct raon_lexer* lex);
-struct raon_token raon_parser_peek(struct raon_parser* parser);
-void raon_parser_eat(struct raon_parser* parser);
-struct raon_parser_block raon_parser_parse_block(struct raon_parser* parser);
-struct raon_parser_entry raon_parser_parse_entry(struct raon_parser* parser);
+char raon_lexer_peek(struct raon_lexer *lex);
+void raon_lexer_eat(struct raon_lexer *lex);
+struct raon_token raon_lexer_lex_number(struct raon_lexer *lex);
+struct raon_token raon_lexer_lex_string(struct raon_lexer *lex);
+struct raon_token raon_lexer_lex_ident(struct raon_lexer *lex);
+struct raon_token raon_parser_peek(struct raon_parser *parser);
+void raon_parser_eat(struct raon_parser *parser);
+struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser);
+struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser);
 
 #endif
