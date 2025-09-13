@@ -43,17 +43,17 @@ workspace = {
     "src/tools/clippy"
     # tidy-alphabetical-end
   ]
-}
 
-exclude = [
-  "build"
-  "compiler/rustc_codegen_cranelift"
-  "compiler/rustc_codegen_gcc"
-  "src/bootstrap"
-  "tests/rustdoc-gui"
-  # HACK(eddyb) This hardcodes the fact that our CI uses `/checkout/obj`.
-  "obj"
-]
+  exclude = [
+    "build"
+    "compiler/rustc_codegen_cranelift"
+    "compiler/rustc_codegen_gcc"
+    "src/bootstrap"
+    "tests/rustdoc-gui"
+    # HACK(eddyb) This hardcodes the fact that our CI uses `/checkout/obj`.
+    "obj"
+  ]
+}
 
 profile.release.package = {
   rustc_thread_pool = {

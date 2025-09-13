@@ -1,0 +1,90 @@
+#ifndef RAON_H
+#define RAON_H
+#include <stdbool.h>
+#include <stdio.h>
+
+enum raon_token_type {
+   raon_token_type_field,
+   raon_token_type_equal,
+   raon_token_type_block_open,
+   raon_token_type_block_close,
+   raon_token_type_newline,
+   raon_token_type_comma,
+   // value types
+   raon_token_type_string,
+   raon_token_type_bool,
+   raon_token_type_int,
+   // used to indicate that an error ocurred
+   raon_token_type_error,
+};
+
+struct raon_token {
+   size_t from_x, from_y;
+   size_t to_x, to_y;
+   enum raon_token_type type;
+
+   union {
+      char* string_val;
+      int int_val;
+      char char_val;
+      bool bool_val;
+   };
+};
+
+struct raon_lexer {
+   bool start;
+   size_t curr_idx;
+   size_t curr_x, curr_y;
+   char* str;
+   size_t str_len;
+};
+
+struct raon_parser {
+   size_t curr_idx;
+   struct raon_token_vec* tokens;
+};
+
+struct raon_parser_block {
+   size_t len;
+   size_t cap;
+   struct raon_parser_entry* entries;
+};
+
+struct raon_parser_entry {
+   char* field;
+   enum raon_token_type value_type;
+   union {
+      char* string_val;
+      int int_val;
+      bool bool_val;
+      struct raon_parser_block block_val;
+   };
+};
+
+// INTENDED PUBLIC API
+
+struct raon_lexer raon_lexer_init_from_str(char* str);
+struct raon_lexer raon_lexer_init_from_file(FILE* file);
+struct raon_token_vec* raon_lexer_lex(struct raon_lexer* lex, size_t* token_len);
+void raon_lexer_free(struct raon_lexer* lex);
+
+struct raon_parser raon_parser_init(struct raon_token_vec* tokens);
+
+struct raon_token_vec;
+struct raon_parser_vec;
+
+void raon_token_vec_free(struct raon_token_vec *vec);
+void raon_parser_vec_free(struct raon_parser_vec *vec);
+
+// MOSTLY USED INTERNALLY
+char raon_lexer_peek(struct raon_lexer* lex);
+void raon_lexer_eat(struct raon_lexer* lex);
+struct raon_token raon_lexer_lex_number(struct raon_lexer* lex);
+struct raon_token raon_lexer_lex_string(struct raon_lexer* lex);
+struct raon_token raon_lexer_lex_ident(struct raon_lexer* lex);
+struct raon_token raon_parser_peek(struct raon_parser* parser);
+void raon_parser_eat(struct raon_parser* parser);
+struct raon_parser_block raon_parser_parse_block(struct raon_parser* parser);
+struct raon_parser_entry raon_parser_parse_entry(struct raon_parser* parser);
+
+#endif
