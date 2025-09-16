@@ -149,11 +149,11 @@ struct raon_token raon_lexer_lex_string(struct raon_lexer *lex) {
       }
    }
    tok.string_val = raon_malloc(str_len + 1);
-   tok.string_val[str_len] = '\0';
    if (!tok.string_val) {
       return error_val;
    }
    strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
+   tok.string_val[str_len] = '\0';
    return tok;
 }
 
@@ -205,13 +205,13 @@ struct raon_token raon_lexer_lex_ident(struct raon_lexer *lex) {
    if (!tok.string_val) {
       return error_val;
    }
-   tok.string_val[str_len] = '\0';
    strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
+   tok.string_val[str_len] = '\0';
    return tok;
 }
 
 void raon_token_free(struct raon_token *token) {
-   if (token->type == raon_token_type_string) {
+   if (token->type == raon_token_type_string || token->type == raon_token_type_field) {
       raon_free(token->string_val);
    }
 
@@ -285,7 +285,6 @@ struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex) {
       return NULL;
    }
 
-
    // TODO: early return error if pushing to vec fails
    while (lex->curr_idx < lex->str_len) {
       char c = raon_lexer_peek(lex);
@@ -311,6 +310,7 @@ struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex) {
       curr_token = raon_lexer_lex_ident(lex);
       if (curr_token.type != raon_token_type_error) {
          if (!raon_token_vec_push(token_vec, curr_token)) {
+            raon_token_free(&curr_token);
             return NULL;
          }
          continue;
@@ -402,13 +402,17 @@ void raon_parser_eat(struct raon_parser *parser) {
    ++parser->curr_idx;
 }
 
-void raon_parser_entry_free(struct raon_parser_entry *entry) {
+static void raon_parser_entry_free(struct raon_parser_entry *entry);
+RAON_VEC(parser, struct raon_parser_entry, raon_parser_entry_free)
+
+static void raon_parser_entry_free(struct raon_parser_entry *entry) {
    if (entry->value_type == raon_token_type_block_open) {
       raon_parser_vec_free(entry->block_val);
    }
+   if (entry->value_type == raon_token_type_string) {
+      raon_free(entry->string_val);
+   }
 }
-
-RAON_VEC(parser, struct raon_parser_entry, raon_parser_entry_free)
 
 struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
    struct raon_token tok = raon_parser_peek(parser);
@@ -464,9 +468,17 @@ struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
 
    curr_token = raon_parser_peek(parser);
    switch (curr_token.type) {
-   case raon_token_type_string:
-      entry.string_val = curr_token.string_val;
+   case raon_token_type_string: {
+      const size_t strsiz = strlen(curr_token.string_val);
+      entry.string_val = raon_malloc(strsiz + 1);
+      if (!entry.string_val) {
+         return error_val;
+      }
+      strncpy(entry.string_val, curr_token.string_val, strsiz);
+      entry.string_val[strsiz] = '\0';
       break;
+   }
+
    case raon_token_type_bool:
       entry.bool_val = curr_token.bool_val;
       break;
@@ -479,7 +491,9 @@ struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
          return error_val;
       }
       entry.block_val = block;
-   } break;
+      break;
+   }
+
    default:
       return error_val;
    }
@@ -539,12 +553,11 @@ int main(void) {
       goto cleanup;
    }
 
-   // TODO: research about leaking happening with lexer
 cleanup:
-   if (tokens)
-      raon_token_vec_free(tokens);
    if (entries)
       raon_parser_vec_free(entries);
+   if (tokens)
+      raon_token_vec_free(tokens);
    if (lex.str != NULL)
       raon_lexer_free(&lex);
 
