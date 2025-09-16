@@ -1,6 +1,7 @@
 theme = "github_dark"
 tab_width = { spaces = 4,  convert-to-space = true }
 
+# this comment would be ignored
 editor = {
 	line-number = "relative"
 	cursorline = true
@@ -13,6 +14,6 @@ editor = {
 	}
 }
 
-languages = {
+languages = { # comments are ignored until newline
 	python =  { language-server = "pyright" }
 }

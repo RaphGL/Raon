@@ -210,6 +210,17 @@ struct raon_token raon_lexer_lex_ident(struct raon_lexer *lex) {
    return tok;
 }
 
+void raon_lexer_ignore_comment(struct raon_lexer *lex) {
+   if (raon_lexer_peek(lex) != '#') {
+      return;
+   }
+   raon_lexer_eat(lex);
+
+   while (raon_lexer_peek(lex) != '\n') {
+      raon_lexer_eat(lex);
+   }
+}
+
 void raon_token_free(struct raon_token *token) {
    if (token->type == raon_token_type_string || token->type == raon_token_type_field) {
       raon_free(token->string_val);
@@ -287,6 +298,8 @@ struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex) {
 
    // TODO: early return error if pushing to vec fails
    while (lex->curr_idx < lex->str_len) {
+      raon_lexer_ignore_comment(lex);
+
       char c = raon_lexer_peek(lex);
       if (c == '\0') {
          break;
