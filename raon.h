@@ -4,14 +4,17 @@
 #include <stdio.h>
 
 enum raon_token_type {
-   raon_token_type_field,
+   // symbols
    raon_token_type_equal,
-   raon_token_type_block_open,
-   raon_token_type_block_close,
    raon_token_type_newline,
    raon_token_type_comma,
+   raon_token_type_block_open,
+   raon_token_type_block_close,
+   raon_token_type_array_open,
+   raon_token_type_array_close,
    // value types
    raon_token_type_string,
+   raon_token_type_field,
    raon_token_type_bool,
    raon_token_type_int,
    // used to indicate that an error ocurred
@@ -44,15 +47,32 @@ struct raon_parser {
    struct raon_token_vec *tokens;
 };
 
-struct raon_parser_entry {
-   char *field;
-   enum raon_token_type value_type;
+enum raon_value_type {
+   raon_value_type_string,
+   raon_value_type_int,
+   raon_value_type_bool,
+   raon_value_type_block,
+   raon_value_type_error,
+};
+
+struct raon_parser_value {
+   enum raon_value_type type;
    union {
       char *string_val;
       int int_val;
       bool bool_val;
       struct raon_parser_vec *block_val;
    };
+};
+
+struct raon_parser_array {
+  enum raon_value_type type; 
+  struct raon_value_vec *values;
+};
+
+struct raon_parser_entry {
+   char *field;
+   struct raon_parser_value value;
 };
 
 // INTENDED PUBLIC API
@@ -81,5 +101,7 @@ struct raon_token raon_parser_peek(struct raon_parser *parser);
 void raon_parser_eat(struct raon_parser *parser);
 struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser);
 struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser);
+struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser);
+struct raon_parser_array raon_parser_parse_array(struct raon_parser *parser);
 
 #endif

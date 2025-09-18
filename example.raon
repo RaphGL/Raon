@@ -1,6 +1,8 @@
 theme = "github_dark"
 tab_width = { spaces = 4,  convert-to-space = true }
 
+some_array = [1, 2, 3]
+
 # this comment would be ignored
 editor = {
 	line-number = "relative"
