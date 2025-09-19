@@ -53,6 +53,7 @@ enum raon_value_type {
    raon_value_type_bool,
    raon_value_type_block,
    raon_value_type_error,
+   raon_value_type_array,
 };
 
 struct raon_parser_value {
@@ -62,6 +63,7 @@ struct raon_parser_value {
       int int_val;
       bool bool_val;
       struct raon_parser_vec *block_val;
+      struct raon_value_vec *array_val;
    };
 };
 
@@ -102,6 +104,6 @@ void raon_parser_eat(struct raon_parser *parser);
 struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser);
 struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser);
 struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser);
-struct raon_parser_array raon_parser_parse_array(struct raon_parser *parser);
+struct raon_value_vec *raon_parser_parse_array(struct raon_parser *parser);
 
 #endif

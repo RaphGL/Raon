@@ -1,5 +1,7 @@
 #include "raon.h"
+#include <asm-generic/errno-base.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,8 +85,9 @@ void raon_lexer_eat(struct raon_lexer *lex) {
 }
 
 struct raon_token raon_lexer_lex_number(struct raon_lexer *lex) {
+   const struct raon_token error_val = { .type = raon_token_type_error };
    if (!isdigit(raon_lexer_peek(lex))) {
-      return (struct raon_token) { .type = raon_token_type_error };
+      return error_val;
    }
    raon_lexer_eat(lex);
 
@@ -113,8 +116,12 @@ struct raon_token raon_lexer_lex_number(struct raon_lexer *lex) {
    }
    strncpy(num, &lex->str[str_start_idx], str_len);
    num[str_len] = '\0';
-   // TODO: handle error on strtoll
+
+   errno = 0;
    tok.int_val = strtoll(num, NULL, 10);
+   if (errno == EINVAL || errno == ERANGE) {
+      return error_val;
+   }
    raon_free(num);
    return tok;
 }
@@ -231,24 +238,24 @@ void raon_token_free(struct raon_token *token) {
 
 #define RAON_VEC(func_prefix, vec_item_type, vec_item_type_free)                                   \
    struct raon_##func_prefix##_vec {                                                               \
-      vec_item_type *tokens;                                                                       \
+      vec_item_type *items;                                                                        \
       size_t cap, len;                                                                             \
    };                                                                                              \
                                                                                                    \
    struct raon_##func_prefix##_vec *raon_##func_prefix##_vec_init(void) {                          \
       const size_t cap = 64;                                                                       \
-      vec_item_type *tokens = raon_malloc(cap * sizeof(*tokens));                                  \
-      if (!tokens) {                                                                               \
+      vec_item_type *items = raon_malloc(cap * sizeof(*items));                                    \
+      if (!items) {                                                                                \
          return NULL;                                                                              \
       }                                                                                            \
-      memset(tokens, 0, cap);                                                                      \
+      memset(items, 0, cap);                                                                       \
                                                                                                    \
       struct raon_##func_prefix##_vec *vec = raon_malloc(sizeof(*vec));                            \
       if (!vec) {                                                                                  \
          return NULL;                                                                              \
       }                                                                                            \
       *vec = (struct raon_##func_prefix##_vec) {                                                   \
-         .tokens = tokens,                                                                         \
+         .items = items,                                                                           \
          .cap = cap,                                                                               \
          .len = 0,                                                                                 \
       };                                                                                           \
@@ -258,31 +265,59 @@ void raon_token_free(struct raon_token *token) {
                                                                                                    \
    void raon_##func_prefix##_vec_free(struct raon_##func_prefix##_vec *vec) {                      \
       for (size_t i = 0; i < vec->len; i++) {                                                      \
-         vec_item_type_free(&vec->tokens[i]);                                                      \
-         vec->tokens[i] = (vec_item_type) { 0 };                                                   \
+         vec_item_type_free(&vec->items[i]);                                                       \
+         vec->items[i] = (vec_item_type) { 0 };                                                    \
       }                                                                                            \
-      raon_free(vec->tokens);                                                                      \
+      raon_free(vec->items);                                                                       \
       raon_free(vec);                                                                              \
    }                                                                                               \
                                                                                                    \
    bool raon_##func_prefix##_vec_push(struct raon_##func_prefix##_vec *vec, vec_item_type tok) {   \
       if (vec->len >= vec->cap) {                                                                  \
          vec->cap *= 2;                                                                            \
-         vec_item_type *new_tokens = raon_malloc(vec->cap * sizeof(*new_tokens));                  \
-         if (!new_tokens) {                                                                        \
+         vec_item_type *new_items = raon_malloc(vec->cap * sizeof(*new_items));                    \
+         if (!new_items) {                                                                         \
             return false;                                                                          \
          }                                                                                         \
-         memcpy(new_tokens, vec->tokens, vec->len * sizeof(*new_tokens));                          \
-         raon_free(vec->tokens);                                                                   \
-         vec->tokens = new_tokens;                                                                 \
+         memcpy(new_items, vec->items, vec->len * sizeof(*new_items));                             \
+         raon_free(vec->items);                                                                    \
+         vec->items = new_items;                                                                   \
       }                                                                                            \
                                                                                                    \
-      vec->tokens[vec->len] = tok;                                                                 \
+      vec->items[vec->len] = tok;                                                                  \
       ++vec->len;                                                                                  \
       return true;                                                                                 \
    }
 
+static void raon_parser_value_free(struct raon_parser_value *value);
+static void raon_parser_entry_free(struct raon_parser_entry *entry);
 RAON_VEC(token, struct raon_token, raon_token_free)
+RAON_VEC(value, struct raon_parser_value, raon_parser_value_free)
+RAON_VEC(parser, struct raon_parser_entry, raon_parser_entry_free)
+
+static void raon_parser_value_free(struct raon_parser_value *value) {
+   switch (value->type) {
+   case raon_value_type_string:
+      raon_free(value->string_val);
+      break;
+   case raon_value_type_block:
+      raon_parser_vec_free(value->block_val);
+      break;
+
+   case raon_value_type_array:
+      raon_value_vec_free(value->array_val);
+      break;
+
+   default:
+      // the other values don't allocate memory
+      break;
+   }
+}
+
+static void raon_parser_entry_free(struct raon_parser_entry *entry) {
+   raon_free(entry->field);
+   raon_parser_value_free(&entry->value);
+}
 
 struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex) {
 #define RAON_ONE_CHAR_TOKEN(literal, enum_type)                                                    \
@@ -422,7 +457,7 @@ struct raon_token raon_parser_peek(struct raon_parser *parser) {
    if (parser->curr_idx >= parser->tokens->len) {
       return error_val;
    }
-   return parser->tokens->tokens[parser->curr_idx];
+   return parser->tokens->items[parser->curr_idx];
 }
 
 void raon_parser_eat(struct raon_parser *parser) {
@@ -430,18 +465,6 @@ void raon_parser_eat(struct raon_parser *parser) {
       return;
    }
    ++parser->curr_idx;
-}
-
-static void raon_parser_entry_free(struct raon_parser_entry *entry);
-RAON_VEC(parser, struct raon_parser_entry, raon_parser_entry_free)
-
-static void raon_parser_entry_free(struct raon_parser_entry *entry) {
-   if (entry->value.type == raon_value_type_block) {
-      raon_parser_vec_free(entry->value.block_val);
-   }
-   if (entry->value.type == raon_value_type_string) {
-      raon_free(entry->value.string_val);
-   }
 }
 
 struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
@@ -481,7 +504,7 @@ struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
 
 struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser) {
    struct raon_parser_value error_val = { .type = raon_value_type_error };
-   struct raon_parser_value value = {0};
+   struct raon_parser_value value = { 0 };
 
    struct raon_token curr_token = raon_parser_peek(parser);
    switch (curr_token.type) {
@@ -517,9 +540,15 @@ struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser) {
       break;
    }
 
-   case raon_token_type_array_open:
-      // struct raon_parser_array *array = raon_parser_parse_array(parser);
-      // TODO implement
+   case raon_token_type_array_open: {
+      struct raon_value_vec *array = raon_parser_parse_array(parser);
+      if (!array) {
+         return error_val;
+      }
+      value.array_val = array;
+      value.type = raon_value_type_array;
+      break;
+   }
 
    default:
       return error_val;
@@ -534,8 +563,46 @@ struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser) {
    return value;
 }
 
-struct raon_parser_array raon_parser_parse_array(struct raon_parser *parser) {
-   // TODO implement   
+struct raon_value_vec *raon_parser_parse_array(struct raon_parser *parser) {
+   if (raon_parser_peek(parser).type != raon_token_type_array_open) {
+      return NULL;
+   }
+   raon_parser_eat(parser);
+
+   struct raon_value_vec *values = raon_value_vec_init();
+   // we start with an error as our "zero value"
+   // the first type we see in the array, we consider it as our array's type
+   enum raon_value_type array_type = raon_value_type_error;
+
+   for (struct raon_token tok = raon_parser_peek(parser); tok.type != raon_token_type_error;
+       tok = raon_parser_peek(parser)) {
+      if (tok.type == raon_token_type_newline) {
+         raon_parser_eat(parser);
+         continue;
+      }
+
+      if (tok.type == raon_token_type_array_close) {
+         raon_parser_eat(parser);
+         break;
+      }
+
+      struct raon_parser_value curr_value = raon_parser_parse_value(parser);
+      if (curr_value.type == raon_value_type_error) {
+         raon_value_vec_free(values);
+         return NULL;
+      }
+      if (array_type == raon_value_type_error) {
+         array_type = curr_value.type;
+      }
+      if (curr_value.type != array_type) {
+         raon_value_vec_free(values);
+         raon_parser_value_free(&curr_value);
+         return NULL;
+      }
+      raon_value_vec_push(values, curr_value);
+   }
+
+   return values;
 }
 
 struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
@@ -546,16 +613,27 @@ struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
    if (curr_token.type != raon_token_type_field) {
       return error_val;
    }
-   entry.field = curr_token.string_val;
+   const size_t strsiz = strlen(curr_token.string_val);
+   entry.field = raon_malloc(strsiz + 1);
+   if (!entry.field) {
+      return error_val;
+   }
+   strncpy(entry.field, curr_token.string_val, strsiz);
+   entry.field[strsiz] = '\0';
    raon_parser_eat(parser);
 
    curr_token = raon_parser_peek(parser);
    if (curr_token.type != raon_token_type_equal) {
+      raon_free(entry.field);
       return error_val;
    }
    raon_parser_eat(parser);
 
    entry.value = raon_parser_parse_value(parser);
+   if (entry.value.type == raon_value_type_error) {
+      raon_free(entry.field);
+      return error_val;
+   }
 
    return entry;
 }
@@ -606,6 +684,8 @@ int main(void) {
       goto cleanup;
    }
 
+   puts("==> finished parsing with no errors");
+
 cleanup:
    if (entries)
       raon_parser_vec_free(entries);
@@ -614,6 +694,5 @@ cleanup:
    if (lex.str != NULL)
       raon_lexer_free(&lex);
 
-   puts("==> finished parsing with no errors");
    return 0;
 }

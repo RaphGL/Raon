@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -pedantic -std=c11
 
 ifdef USE_SANITIZERS
-CFLAGS += -fsanitize=undefined,leak,address
+CFLAGS += -fsanitize=undefined,leak,address -g
 endif
 
 all: raon.c
