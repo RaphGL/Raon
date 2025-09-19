@@ -1,4 +1,5 @@
 ﻿---
+Language: C
 BasedOnStyle: WebKit
 BreakBeforeBraces: Attach
 ColumnLimit: 100

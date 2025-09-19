@@ -1,6 +1,7 @@
 #ifndef RAON_H
 #define RAON_H
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 enum raon_token_type {
@@ -28,7 +29,7 @@ struct raon_token {
 
    union {
       char *string_val;
-      int int_val;
+      intptr_t int_val;
       char char_val;
       bool bool_val;
    };
@@ -60,7 +61,7 @@ struct raon_parser_value {
    enum raon_value_type type;
    union {
       char *string_val;
-      int int_val;
+      intptr_t int_val;
       bool bool_val;
       struct raon_parser_vec *block_val;
       struct raon_value_vec *array_val;
@@ -68,8 +69,8 @@ struct raon_parser_value {
 };
 
 struct raon_parser_array {
-  enum raon_value_type type; 
-  struct raon_value_vec *values;
+   enum raon_value_type type;
+   struct raon_value_vec *values;
 };
 
 struct raon_parser_entry {

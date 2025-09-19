@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,7 +87,8 @@ void raon_lexer_eat(struct raon_lexer *lex) {
 
 struct raon_token raon_lexer_lex_number(struct raon_lexer *lex) {
    const struct raon_token error_val = { .type = raon_token_type_error };
-   if (!isdigit(raon_lexer_peek(lex))) {
+   const char first_char = raon_lexer_peek(lex);
+   if (!isdigit(first_char) && first_char != '-') {
       return error_val;
    }
    raon_lexer_eat(lex);
