@@ -317,7 +317,9 @@ static void raon_parser_value_free(struct raon_parser_value *value) {
 }
 
 static void raon_parser_entry_free(struct raon_parser_entry *entry) {
-   raon_free(entry->field);
+   if (entry->field_type == raon_field_type_string) {
+      raon_free(entry->string_field);
+   }
    raon_parser_value_free(&entry->value);
 }
 
@@ -477,6 +479,7 @@ struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
    raon_parser_eat(parser);
 
    struct raon_parser_vec *entries = raon_parser_vec_init();
+   enum raon_field_type field_type = raon_field_type_error;
 
    for (struct raon_token tok = raon_parser_peek(parser); tok.type != raon_token_type_error;
        tok = raon_parser_peek(parser)) {
@@ -495,8 +498,19 @@ struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
          raon_parser_vec_free(entries);
          return NULL;
       }
+
+      // TYPE CHECKING
+      if (field_type == raon_field_type_error) {
+         field_type = entry.field_type;
+      } else if (entry.field_type != field_type) {
+         raon_parser_vec_free(entries);
+         raon_parser_entry_free(&entry);
+         return NULL;
+      }
+
       if (!raon_parser_vec_push(entries, entry)) {
          raon_parser_vec_free(entries);
+         raon_parser_entry_free(&entry);
          return NULL;
       }
    }
@@ -593,14 +607,16 @@ struct raon_value_vec *raon_parser_parse_array(struct raon_parser *parser) {
          raon_value_vec_free(values);
          return NULL;
       }
+
+      // TYPE CHECKING
       if (array_type == raon_value_type_error) {
          array_type = curr_value.type;
-      }
-      if (curr_value.type != array_type) {
+      } else if (curr_value.type != array_type) {
          raon_value_vec_free(values);
          raon_parser_value_free(&curr_value);
          return NULL;
       }
+
       raon_value_vec_push(values, curr_value);
    }
 
@@ -608,32 +624,42 @@ struct raon_value_vec *raon_parser_parse_array(struct raon_parser *parser) {
 }
 
 struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
-   struct raon_parser_entry error_val = { .value.type = raon_value_type_error };
+   struct raon_parser_entry error_val
+       = { .value.type = raon_value_type_error, .field_type = raon_field_type_error };
    struct raon_parser_entry entry = { 0 };
 
    struct raon_token curr_token = raon_parser_peek(parser);
-   if (curr_token.type != raon_token_type_field) {
+   if (curr_token.type == raon_token_type_string || curr_token.type == raon_token_type_field) {
+      const size_t strsiz = strlen(curr_token.string_val);
+      entry.string_field = raon_malloc(strsiz + 1);
+      if (!entry.string_field) {
+         return error_val;
+      }
+      strncpy(entry.string_field, curr_token.string_val, strsiz);
+      entry.string_field[strsiz] = '\0';
+      entry.field_type = raon_field_type_string;
+   } else if (curr_token.type == raon_token_type_int) {
+      entry.int_field = curr_token.int_val;
+      entry.field_type = raon_field_type_int;
+   } else {
       return error_val;
    }
-   const size_t strsiz = strlen(curr_token.string_val);
-   entry.field = raon_malloc(strsiz + 1);
-   if (!entry.field) {
-      return error_val;
-   }
-   strncpy(entry.field, curr_token.string_val, strsiz);
-   entry.field[strsiz] = '\0';
    raon_parser_eat(parser);
 
    curr_token = raon_parser_peek(parser);
    if (curr_token.type != raon_token_type_equal) {
-      raon_free(entry.field);
+      if (entry.field_type == raon_field_type_string) {
+         raon_free(entry.string_field);
+      }
       return error_val;
    }
    raon_parser_eat(parser);
 
    entry.value = raon_parser_parse_value(parser);
    if (entry.value.type == raon_value_type_error) {
-      raon_free(entry.field);
+      if (entry.field_type == raon_field_type_string) {
+         raon_free(entry.string_field);
+      }
       return error_val;
    }
 

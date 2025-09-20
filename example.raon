@@ -3,6 +3,16 @@ tab_width = { spaces = 4,  convert-to-space = true }
 
 some_array = [-2, -1, 0, 1, 2, 3]
 
+sparse_array = {
+	"with string" = true
+	"another string" = false
+}
+
+sparse_array2 = {
+	0 = "hello",
+	5 = "world",
+}
+
 # this comment would be ignored
 editor = {
 	line-number = "relative"

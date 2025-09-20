@@ -3,9 +3,9 @@
 ```py
 entry = ({field} "=" {value})*
 block = "{" {entry}* "}" 
-field = [A-z | 0-9 | "-" | "_"]*
+field = (A-z | 0-9 | "-" | "_")* | {int} | {string}
 value = ({string} | {bool} | {int} | {block} | {array}) ("," | "\n")
-string = [\W\d]* # a string can be any valid unicode
+string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool = "true" | "false"
 int = "-"? 0-9*
 array = "[" {value}*  "]"
@@ -44,6 +44,39 @@ cannot store any other type. So this should be an error.
 **Rationale:** Homogenous types make for more predictable input, it's easy for the machine and for users to understand.
 It also makes it much easier to simply copy the array directly to any language's builtin array type. If it were dynamic
 it would be harder to do this in statically typed languages.
+
+### Blocks
+Just like with arrays, the first type encounted in a block determines the type for the fields in the block.
+The one exception is that both a normal field identifier and a string are considered as a string field.
+
+So:
+```c
+block = {
+  0 = "something",
+  1 = "something else",
+}
+```
+and
+```c
+block = {
+  something = true,  
+  "something else" = [1, 2, 3],
+}
+```
+Are both valid.
+
+But
+```c
+block = {
+  something = true,
+  5 = [1, 2, 3],
+}
+```
+Results in an error.
+
+**Rationale:** Blocks are basically the same as a hashmap, so the keys have to be of the same type.
+There's no real difference between a field identifier like `my_val` and a string `"my_val"` when passed to a hash function,
+therefore, the distinction doesn't matter.
 
 ### Dotted fields
 TODO
