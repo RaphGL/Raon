@@ -1,15 +1,24 @@
 # RAON Specification
 
 ```py
-entry = ({field} "=" {value})*
-block = "{" {entry}* "}" 
-field = (A-z | 0-9 | "-" | "_")* | {int} | {string}
-value = ({string} | {bool} | {int} | {block} | {array}) ("," | "\n")
+entry  = (field "=" value)*
+block  = "{" entry* "}" 
+field  = (A-z | 0-9 | "-" | "_")* | int | string
+value  = (string | bool | int | block | array) ("," | "\n")
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
-bool = "true" | "false"
-int = "-"? 0-9*
-array = "[" {value}*  "]"
+bool   = "true" | "false"
+int    = "-"? 0-9*
+array  = "[" value*  "]"
 ```
+
+Grammar syntax:
+- `=`: starts a grammar point declaration.
+- `*`: the previous token is repeated zero or more times. 
+- `?`: the previous token is repeated 0 or 1 time.
+- `""`: anything in quotes is a literal.
+- `()`: used for grouping, for example `(num "+" num)*` means that this will happen 0 or more times.
+- `|`: used to denote that either the left or the right side will happen, for example `string | bool` means that this will either be
+whatever is defined in the string grammar point or in the bool grammar point.
 
 ### Primitive types
 There's only 5 types in Raon:
