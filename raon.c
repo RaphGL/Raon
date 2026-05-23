@@ -1,5 +1,3 @@
-#include "raon.h"
-#include <asm-generic/errno-base.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -16,711 +14,293 @@
    #define raon_free free
 #endif
 
-struct raon_lexer raon_lexer_init_from_str(char *str) {
-   const size_t str_len = strlen(str);
-   char *str_copy = raon_malloc(str_len * sizeof(char));
-   strncpy(str_copy, str, str_len);
-   return (struct raon_lexer) {
-      .str = str_copy,
-      .str_len = str_len,
+enum raon_token_type {
+   // symbols
+   raon_token_type_equal,
+   raon_token_type_newline,
+   raon_token_type_comma,
+   raon_token_type_block_open,
+   raon_token_type_block_close,
+   raon_token_type_array_open,
+   raon_token_type_array_close,
+   raon_token_type_eof,
+   // value types
+   raon_token_type_string,
+   raon_token_type_field,
+   raon_token_type_bool,
+   raon_token_type_int,
+   // used to indicate that an error ocurred
+   raon_token_type_error,
+};
+
+struct raon_token {
+   size_t start_line, start_col;
+   size_t end_line, end_col;
+   enum raon_token_type type;
+   union {
+      char *str_val;
+      intptr_t int_val;
+      char char_val;
+      bool bool_val;
    };
+};
+
+struct raon_lexer {
+   bool start;
+   size_t line, col;
+   size_t idx, str_len;
+   char *str;
+};
+
+struct raon_lexer raon_lexer_init(char *str) {
+   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .start = false };
 }
 
-// initialization failed if str field is NULL
-struct raon_lexer raon_lexer_init_from_file(char *filepath) {
-   FILE *file = fopen(filepath, "r");
-   const struct raon_lexer error_val = { .str = NULL };
-   if (!file) {
-      return error_val;
+static char raon_lexer_peek_char(struct raon_lexer *self) {
+   if (!self->start) {
+      return self->str[self->idx];
    }
 
-   fseek(file, 0, SEEK_END);
-   size_t len = ftell(file);
-   fseek(file, 0, SEEK_SET);
-
-   char *str = raon_malloc(len + 1);
-   if (!str) {
-      fclose(file);
-      return error_val;
-   }
-   fread(str, 1, len, file);
-   fclose(file);
-   str[len] = '\0';
-
-   return (struct raon_lexer) { .str = str, .str_len = strlen(str) };
-}
-
-void raon_lexer_free(struct raon_lexer *lex) {
-   raon_free(lex->str);
-   *lex = (struct raon_lexer) { 0 };
-}
-
-char raon_lexer_peek(struct raon_lexer *lex) {
-   size_t next_tok = lex->start ? lex->curr_idx + 1 : 0;
-
-   if (next_tok >= lex->str_len) {
+   if (self->idx + 1 >= self->str_len) {
       return '\0';
    }
-   return lex->str[next_tok];
+   return self->str[self->idx + 1];
 }
 
-void raon_lexer_eat(struct raon_lexer *lex) {
-   size_t next_idx;
-   if (lex->start) {
-      next_idx = lex->curr_idx + 1;
-   } else {
-      next_idx = 0;
-      lex->start = true;
+static char raon_lexer_eat_char(struct raon_lexer *self) {
+   if (self->idx >= self->str_len) {
+      return '\0';
    }
-   if (next_idx >= lex->str_len) {
+
+   char curr = self->str[self->idx];
+   if (self->start) {
+      ++self->idx;
+   } else {
+      self->start = true;
+   }
+
+   if (curr == '\n') {
+      ++self->line;
+      self->col = 0;
+   } else {
+      ++self->col;
+   }
+   return curr;
+}
+
+static void raon_lexer_ignore_comment(struct raon_lexer *self) {
+   if (raon_lexer_peek_char(self) != '#') {
       return;
    }
-   lex->curr_idx = next_idx;
-   char next_tok = lex->str[next_idx];
-   if (next_tok == '\n') {
-      ++lex->curr_y;
-      lex->curr_x = 0;
-   } else {
-      ++lex->curr_x;
+   raon_lexer_eat_char(self);
+
+   for (;;) {
+      char curr = raon_lexer_peek_char(self);
+      if (curr == '\0' || curr == '\n') {
+         break;
+      }
+      raon_lexer_eat_char(self);
    }
 }
 
-struct raon_token raon_lexer_lex_number(struct raon_lexer *lex) {
-   const struct raon_token error_val = { .type = raon_token_type_error };
-   const char first_char = raon_lexer_peek(lex);
-   if (!isdigit(first_char) && first_char != '-') {
-      return error_val;
-   }
-   raon_lexer_eat(lex);
-
-   struct raon_token tok = {
-      .from_x = lex->curr_x,
-      .from_y = lex->curr_y,
-      .type = raon_token_type_int,
-   };
-
-   size_t str_start_idx = lex->curr_idx;
-   size_t str_len = 1;
-   for (;;) {
-      char c = raon_lexer_peek(lex);
-      if (!isdigit(c)) {
-         break;
-      }
-      raon_lexer_eat(lex);
-      ++str_len;
-   }
-   tok.to_x = lex->curr_x;
-   tok.to_y = lex->curr_y;
-
-   char *num = raon_malloc(str_len + 1);
-   if (!num) {
+static struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
+   if (raon_lexer_peek_char(self) != '"') {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   strncpy(num, &lex->str[str_start_idx], str_len);
-   num[str_len] = '\0';
+   raon_lexer_eat_char(self);
+
+   struct raon_token token = {
+      .type = raon_token_type_string,
+      .start_line = self->line,
+      .start_col = self->col,
+   };
+   raon_lexer_eat_char(self);
+
+   const size_t start_str = self->idx;
+   while (raon_lexer_peek_char(self) != '\0') {
+      char curr = raon_lexer_eat_char(self);
+      if (curr == '"') {
+         break;
+      }
+   }
+   const size_t end_str = self->idx - 1;
+   const size_t str_len = end_str - start_str;
+   token.end_line = self->line;
+   token.end_col = self->col;
+
+   token.str_val = raon_malloc(str_len + 1);
+   if (!token.str_val) {
+      return (struct raon_token) { .type = raon_token_type_error };
+   }
+   strncpy(token.str_val, &self->str[start_str], str_len);
+   token.str_val[str_len] = '\0';
+   return token;
+}
+
+static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
+   char curr = raon_lexer_peek_char(self);
+   if (!isdigit(curr) && curr != '-') {
+      return (struct raon_token) { .type = raon_token_type_error };
+   }
+   raon_lexer_eat_char(self);
+
+   struct raon_token token = {
+      .type = raon_token_type_int,
+      .start_line = self->line,
+      .start_col = self->col,
+   };
+
+   size_t start_int = self->idx;
+   while (isdigit(raon_lexer_peek_char(self))) {
+      raon_lexer_eat_char(self);
+   }
+   size_t end_int = self->idx;
+   size_t int_len = end_int - start_int + 1;
+   token.end_col = self->col;
+   token.end_line = self->line;
+
+   char *int_str = raon_malloc(int_len + 1);
+   if (!int_str) {
+      return (struct raon_token) { .type = raon_token_type_error };
+   }
+   strncpy(int_str, &self->str[start_int], int_len);
+   int_str[int_len] = '\0';
 
    errno = 0;
-   tok.int_val = strtoll(num, NULL, 10);
+   token.int_val = strtoll(int_str, NULL, 10);
    if (errno == EINVAL || errno == ERANGE) {
-      return error_val;
-   }
-   raon_free(num);
-   return tok;
-}
-
-struct raon_token raon_lexer_lex_string(struct raon_lexer *lex) {
-   const struct raon_token error_val = (struct raon_token) { .type = raon_token_type_error };
-
-   if (raon_lexer_peek(lex) != '"') {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   raon_lexer_eat(lex);
-   raon_lexer_eat(lex);
-   size_t str_start_idx = lex->curr_idx;
-
-   struct raon_token tok = {
-      .from_x = lex->curr_x,
-      .from_y = lex->curr_y,
-      .type = raon_token_type_string,
-   };
-
-   size_t str_len = 0;
-   for (;;) {
-      char c = raon_lexer_peek(lex);
-      ++str_len;
-      raon_lexer_eat(lex);
-      if (c == '"') {
-         break;
-      }
-
-      if (c == '\0') {
-         return error_val;
-      }
-   }
-   tok.string_val = raon_malloc(str_len + 1);
-   if (!tok.string_val) {
-      return error_val;
-   }
-   strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
-   tok.string_val[str_len] = '\0';
-   return tok;
+   raon_free(int_str);
+   return token;
 }
 
-// lexes bools and fields
-struct raon_token raon_lexer_lex_ident(struct raon_lexer *lex) {
-   const struct raon_token error_val = {
-      .type = raon_token_type_error,
-   };
-
-   if (!isalpha(raon_lexer_peek(lex))) {
-      return error_val;
+static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
+   if (!isalpha(raon_lexer_peek_char(self))) {
+      return (struct raon_token) { .type = raon_token_type_error };
    }
-   raon_lexer_eat(lex);
+   raon_lexer_eat_char(self);
 
-   struct raon_token tok = {
-      .from_x = lex->curr_x,
-      .from_y = lex->curr_y,
+   struct raon_token token = {
+      .type = raon_token_type_field,
+      .start_line = self->line,
+      .start_col = self->col,
    };
 
-   size_t str_start_idx = lex->curr_idx;
-   size_t str_len = 0;
-
+   size_t start_ident = self->idx;
    for (;;) {
-      char c = raon_lexer_peek(lex);
-      ++str_len;
-      raon_lexer_eat(lex);
+      char c = raon_lexer_peek_char(self);
       if (c != '_' && c != '-' && !isalnum(c)) {
          break;
       }
+      raon_lexer_eat_char(self);
    }
-   tok.to_x = lex->curr_x;
-   tok.to_y = lex->curr_y;
+   size_t end_ident = self->idx;
+   size_t ident_len = end_ident - start_ident + 1;
+   const char *ident = &self->str[start_ident];
 
-   const char *str = &lex->str[str_start_idx];
-   if (strncmp(str, "true", str_len) == 0) {
-      tok.type = raon_token_type_bool;
-      tok.bool_val = true;
-      return tok;
-   }
-
-   if (strncmp(str, "false", str_len) == 0) {
-      tok.type = raon_token_type_bool;
-      tok.bool_val = false;
-      return tok;
+   if (strncmp(ident, "true", ident_len) == 0) {
+      token.type = raon_token_type_bool;
+      token.bool_val = true;
+      return token;
    }
 
-   tok.type = raon_token_type_field;
-   tok.string_val = raon_malloc(str_len + 1);
-   if (!tok.string_val) {
-      return error_val;
+   if (strncmp(ident, "false", ident_len) == 0) {
+      token.type = raon_token_type_bool;
+      token.bool_val = false;
+      return token;
    }
-   strncpy(tok.string_val, &lex->str[str_start_idx], str_len);
-   tok.string_val[str_len] = '\0';
-   return tok;
+
+   token.type = raon_token_type_field;
+   token.str_val = raon_malloc(ident_len + 1);
+   if (!token.str_val) {
+      return (struct raon_token) { .type = raon_token_type_error };
+   }
+   strncpy(token.str_val, ident, ident_len);
+   token.str_val[ident_len] = '\0';
+   return token;
 }
 
-void raon_lexer_ignore_comment(struct raon_lexer *lex) {
-   if (raon_lexer_peek(lex) != '#') {
-      return;
-   }
-   raon_lexer_eat(lex);
-
-   while (raon_lexer_peek(lex) != '\n') {
-      raon_lexer_eat(lex);
-   }
-}
-
-void raon_token_free(struct raon_token *token) {
-   if (token->type == raon_token_type_string || token->type == raon_token_type_field) {
-      raon_free(token->string_val);
-   }
-
-   *token = (struct raon_token) { 0 };
-}
-
-#define RAON_VEC(func_prefix, vec_item_type, vec_item_type_free)                                   \
-   struct raon_##func_prefix##_vec {                                                               \
-      vec_item_type *items;                                                                        \
-      size_t cap, len;                                                                             \
-   };                                                                                              \
-                                                                                                   \
-   struct raon_##func_prefix##_vec *raon_##func_prefix##_vec_init(void) {                          \
-      const size_t cap = 64;                                                                       \
-      vec_item_type *items = raon_malloc(cap * sizeof(*items));                                    \
-      if (!items) {                                                                                \
-         return NULL;                                                                              \
-      }                                                                                            \
-      memset(items, 0, cap);                                                                       \
-                                                                                                   \
-      struct raon_##func_prefix##_vec *vec = raon_malloc(sizeof(*vec));                            \
-      if (!vec) {                                                                                  \
-         return NULL;                                                                              \
-      }                                                                                            \
-      *vec = (struct raon_##func_prefix##_vec) {                                                   \
-         .items = items,                                                                           \
-         .cap = cap,                                                                               \
-         .len = 0,                                                                                 \
-      };                                                                                           \
-                                                                                                   \
-      return vec;                                                                                  \
-   }                                                                                               \
-                                                                                                   \
-   void raon_##func_prefix##_vec_free(struct raon_##func_prefix##_vec *vec) {                      \
-      for (size_t i = 0; i < vec->len; i++) {                                                      \
-         vec_item_type_free(&vec->items[i]);                                                       \
-         vec->items[i] = (vec_item_type) { 0 };                                                    \
-      }                                                                                            \
-      raon_free(vec->items);                                                                       \
-      raon_free(vec);                                                                              \
-   }                                                                                               \
-                                                                                                   \
-   bool raon_##func_prefix##_vec_push(struct raon_##func_prefix##_vec *vec, vec_item_type tok) {   \
-      if (vec->len >= vec->cap) {                                                                  \
-         vec->cap *= 2;                                                                            \
-         vec_item_type *new_items = raon_malloc(vec->cap * sizeof(*new_items));                    \
-         if (!new_items) {                                                                         \
-            return false;                                                                          \
-         }                                                                                         \
-         memcpy(new_items, vec->items, vec->len * sizeof(*new_items));                             \
-         raon_free(vec->items);                                                                    \
-         vec->items = new_items;                                                                   \
-      }                                                                                            \
-                                                                                                   \
-      vec->items[vec->len] = tok;                                                                  \
-      ++vec->len;                                                                                  \
-      return true;                                                                                 \
-   }
-
-static void raon_parser_value_free(struct raon_parser_value *value);
-static void raon_parser_entry_free(struct raon_parser_entry *entry);
-RAON_VEC(token, struct raon_token, raon_token_free)
-RAON_VEC(value, struct raon_parser_value, raon_parser_value_free)
-RAON_VEC(parser, struct raon_parser_entry, raon_parser_entry_free)
-
-static void raon_parser_value_free(struct raon_parser_value *value) {
-   switch (value->type) {
-   case raon_value_type_string:
-      raon_free(value->string_val);
-      break;
-   case raon_value_type_block:
-      raon_parser_vec_free(value->block_val);
-      break;
-
-   case raon_value_type_array:
-      raon_value_vec_free(value->array_val);
-      break;
-
-   default:
-      // the other values don't allocate memory
-      break;
-   }
-}
-
-static void raon_parser_entry_free(struct raon_parser_entry *entry) {
-   if (entry->field_type == raon_field_type_string) {
-      raon_free(entry->string_field);
-   }
-   raon_parser_value_free(&entry->value);
-}
-
-struct raon_token_vec *raon_lexer_lex(struct raon_lexer *lex) {
+struct raon_token raon_lexer_eat(struct raon_lexer *self) {
 #define RAON_ONE_CHAR_TOKEN(literal, enum_type)                                                    \
    (struct raon_token) {                                                                           \
-      .type = enum_type, .char_val = literal, .from_x = lex->curr_x, .from_y = lex->curr_y,        \
-      .to_x = lex->curr_x, .to_y = lex->curr_y,                                                    \
+      .type = enum_type, .char_val = literal, .start_col = self->col, .start_line = self->line,    \
+      .end_line = self->line, .end_col = self->col,                                                \
    }
 
-   struct raon_token_vec *token_vec = raon_token_vec_init();
-   if (!token_vec) {
-      return NULL;
-   }
-
-   while (lex->curr_idx < lex->str_len) {
-      raon_lexer_ignore_comment(lex);
-
-      char c = raon_lexer_peek(lex);
-      if (c == '\0') {
+   struct raon_token curr_token = { 0 };
+   for (;;) {
+      char curr = raon_lexer_peek_char(self);
+      if (curr == '\0') {
          break;
       }
 
-      struct raon_token curr_token = { 0 };
-      if (c == '\n') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN('\n', raon_token_type_newline);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
+      switch (curr) {
+      case '#':
+         raon_lexer_ignore_comment(self);
+         break;
+      case '\n':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('\n', raon_token_type_newline);
+      case '=':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('=', raon_token_type_equal);
+      case '{':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('{', raon_token_type_block_open);
+      case '}':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('}', raon_token_type_block_close);
+      case '[':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('[', raon_token_type_array_open);
+      case ']':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN(']', raon_token_type_array_close);
+      case ',':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN(',', raon_token_type_comma);
+      }
+
+      if (isspace(curr)) {
+         raon_lexer_eat_char(self);
          continue;
       }
 
-      if (isspace(c)) {
-         raon_lexer_eat(lex);
-         continue;
-      }
-
-      curr_token = raon_lexer_lex_ident(lex);
+      curr_token = raon_lexer_lex_ident(self);
       if (curr_token.type != raon_token_type_error) {
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            raon_token_free(&curr_token);
-            return NULL;
-         }
-         continue;
+         return curr_token;
       }
 
-      curr_token = raon_lexer_lex_number(lex);
+      curr_token = raon_lexer_lex_int(self);
       if (curr_token.type != raon_token_type_error) {
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
+         return curr_token;
       }
 
-      curr_token = raon_lexer_lex_string(lex);
+      curr_token = raon_lexer_lex_string(self);
       if (curr_token.type != raon_token_type_error) {
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
+         return curr_token;
       }
-
-      if (c == '=') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN('=', raon_token_type_equal);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      if (c == '{') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN('{', raon_token_type_block_open);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      if (c == '}') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN('}', raon_token_type_block_close);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      if (c == '[') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN('[', raon_token_type_array_open);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      if (c == ']') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN(']', raon_token_type_array_close);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      if (c == ',') {
-         raon_lexer_eat(lex);
-         curr_token = RAON_ONE_CHAR_TOKEN(',', raon_token_type_comma);
-         if (!raon_token_vec_push(token_vec, curr_token)) {
-            return NULL;
-         }
-         continue;
-      }
-
-      raon_token_vec_free(token_vec);
-      token_vec = NULL;
-      break;
    }
 
+   return RAON_ONE_CHAR_TOKEN(EOF, raon_token_type_eof);
 #undef RAON_ONE_CHAR_TOKEN
-   return token_vec;
-}
-
-struct raon_parser raon_parser_init(struct raon_token_vec *tokens) {
-   return (struct raon_parser) {
-      .tokens = tokens,
-   };
-}
-
-// returns error when there's nothing more to peek
-struct raon_token raon_parser_peek(struct raon_parser *parser) {
-   const struct raon_token error_val = {
-      .type = raon_token_type_error,
-   };
-
-   if (parser->curr_idx >= parser->tokens->len) {
-      return error_val;
-   }
-   return parser->tokens->items[parser->curr_idx];
-}
-
-void raon_parser_eat(struct raon_parser *parser) {
-   if (parser->curr_idx >= parser->tokens->len) {
-      return;
-   }
-   ++parser->curr_idx;
-}
-
-struct raon_parser_vec *raon_parser_parse_block(struct raon_parser *parser) {
-   struct raon_token tok = raon_parser_peek(parser);
-   if (tok.type != raon_token_type_block_open) {
-      return NULL;
-   }
-   raon_parser_eat(parser);
-
-   struct raon_parser_vec *entries = raon_parser_vec_init();
-   enum raon_field_type field_type = raon_field_type_error;
-
-   for (struct raon_token tok = raon_parser_peek(parser); tok.type != raon_token_type_error;
-       tok = raon_parser_peek(parser)) {
-      if (tok.type == raon_token_type_block_close) {
-         raon_parser_eat(parser);
-         break;
-      }
-
-      if (tok.type == raon_token_type_newline) {
-         raon_parser_eat(parser);
-         continue;
-      }
-
-      struct raon_parser_entry entry = raon_parser_parse_entry(parser);
-      if (entry.value.type == raon_value_type_error) {
-         raon_parser_vec_free(entries);
-         return NULL;
-      }
-
-      // TYPE CHECKING
-      if (field_type == raon_field_type_error) {
-         field_type = entry.field_type;
-      } else if (entry.field_type != field_type) {
-         raon_parser_vec_free(entries);
-         raon_parser_entry_free(&entry);
-         return NULL;
-      }
-
-      if (!raon_parser_vec_push(entries, entry)) {
-         raon_parser_vec_free(entries);
-         raon_parser_entry_free(&entry);
-         return NULL;
-      }
-   }
-
-   return entries;
-}
-
-struct raon_parser_value raon_parser_parse_value(struct raon_parser *parser) {
-   struct raon_parser_value error_val = { .type = raon_value_type_error };
-   struct raon_parser_value value = { 0 };
-
-   struct raon_token curr_token = raon_parser_peek(parser);
-   switch (curr_token.type) {
-   case raon_token_type_string: {
-      const size_t strsiz = strlen(curr_token.string_val);
-      value.string_val = raon_malloc(strsiz + 1);
-      if (!value.string_val) {
-         return error_val;
-      }
-      strncpy(value.string_val, curr_token.string_val, strsiz);
-      value.string_val[strsiz] = '\0';
-      value.type = raon_value_type_string;
-      break;
-   }
-
-   case raon_token_type_bool:
-      value.bool_val = curr_token.bool_val;
-      value.type = raon_value_type_bool;
-      break;
-
-   case raon_token_type_int:
-      value.int_val = curr_token.int_val;
-      value.type = raon_value_type_int;
-      break;
-
-   case raon_token_type_block_open: {
-      struct raon_parser_vec *block = raon_parser_parse_block(parser);
-      if (!block) {
-         return error_val;
-      }
-      value.block_val = block;
-      value.type = raon_value_type_block;
-      break;
-   }
-
-   case raon_token_type_array_open: {
-      struct raon_value_vec *array = raon_parser_parse_array(parser);
-      if (!array) {
-         return error_val;
-      }
-      value.array_val = array;
-      value.type = raon_value_type_array;
-      break;
-   }
-
-   default:
-      return error_val;
-   }
-   raon_parser_eat(parser);
-
-   curr_token = raon_parser_peek(parser);
-   if (curr_token.type == raon_token_type_comma || curr_token.type == raon_token_type_newline) {
-      raon_parser_eat(parser);
-   }
-
-   return value;
-}
-
-struct raon_value_vec *raon_parser_parse_array(struct raon_parser *parser) {
-   if (raon_parser_peek(parser).type != raon_token_type_array_open) {
-      return NULL;
-   }
-   raon_parser_eat(parser);
-
-   struct raon_value_vec *values = raon_value_vec_init();
-   // we start with an error as our "zero value"
-   // the first type we see in the array, we consider it as our array's type
-   enum raon_value_type array_type = raon_value_type_error;
-
-   for (struct raon_token tok = raon_parser_peek(parser); tok.type != raon_token_type_error;
-       tok = raon_parser_peek(parser)) {
-      if (tok.type == raon_token_type_newline) {
-         raon_parser_eat(parser);
-         continue;
-      }
-
-      if (tok.type == raon_token_type_array_close) {
-         raon_parser_eat(parser);
-         break;
-      }
-
-      struct raon_parser_value curr_value = raon_parser_parse_value(parser);
-      if (curr_value.type == raon_value_type_error) {
-         raon_value_vec_free(values);
-         return NULL;
-      }
-
-      // TYPE CHECKING
-      if (array_type == raon_value_type_error) {
-         array_type = curr_value.type;
-      } else if (curr_value.type != array_type) {
-         raon_value_vec_free(values);
-         raon_parser_value_free(&curr_value);
-         return NULL;
-      }
-
-      raon_value_vec_push(values, curr_value);
-   }
-
-   return values;
-}
-
-struct raon_parser_entry raon_parser_parse_entry(struct raon_parser *parser) {
-   struct raon_parser_entry error_val
-       = { .value.type = raon_value_type_error, .field_type = raon_field_type_error };
-   struct raon_parser_entry entry = { 0 };
-
-   struct raon_token curr_token = raon_parser_peek(parser);
-   if (curr_token.type == raon_token_type_string || curr_token.type == raon_token_type_field) {
-      const size_t strsiz = strlen(curr_token.string_val);
-      entry.string_field = raon_malloc(strsiz + 1);
-      if (!entry.string_field) {
-         return error_val;
-      }
-      strncpy(entry.string_field, curr_token.string_val, strsiz);
-      entry.string_field[strsiz] = '\0';
-      entry.field_type = raon_field_type_string;
-   } else if (curr_token.type == raon_token_type_int) {
-      entry.int_field = curr_token.int_val;
-      entry.field_type = raon_field_type_int;
-   } else {
-      return error_val;
-   }
-   raon_parser_eat(parser);
-
-   curr_token = raon_parser_peek(parser);
-   if (curr_token.type != raon_token_type_equal) {
-      if (entry.field_type == raon_field_type_string) {
-         raon_free(entry.string_field);
-      }
-      return error_val;
-   }
-   raon_parser_eat(parser);
-
-   entry.value = raon_parser_parse_value(parser);
-   if (entry.value.type == raon_value_type_error) {
-      if (entry.field_type == raon_field_type_string) {
-         raon_free(entry.string_field);
-      }
-      return error_val;
-   }
-
-   return entry;
-}
-
-struct raon_parser_vec *raon_parser_parse(struct raon_parser *parser) {
-   struct raon_parser_vec *entries = raon_parser_vec_init();
-
-   for (struct raon_token tok = raon_parser_peek(parser); tok.type != raon_token_type_error;
-       tok = raon_parser_peek(parser)) {
-      if (tok.type == raon_token_type_newline) {
-         raon_parser_eat(parser);
-         continue;
-      }
-
-      struct raon_parser_entry entry = raon_parser_parse_entry(parser);
-      if (entry.value.type == raon_value_type_error) {
-         raon_parser_vec_free(entries);
-         return NULL;
-      }
-      if (!raon_parser_vec_push(entries, entry)) {
-         raon_parser_vec_free(entries);
-         return NULL;
-      }
-   }
-
-   return entries;
 }
 
 int main(void) {
-   struct raon_lexer lex = raon_lexer_init_from_file("./example.raon");
-   if (!lex.str) {
-      perror("reading file failed");
-      goto cleanup;
+   FILE *raon_fd = fopen("./example.raon", "r");
+   if (!raon_fd) {
+      perror("Failed to open raon file");
+      return 1;
    }
 
-   puts(lex.str);
-
-   struct raon_token_vec *tokens = raon_lexer_lex(&lex);
-   if (!tokens) {
-      puts("error lexing");
-      goto cleanup;
+   char buf[4096] = { 0 };
+   if (fread(buf, 1, sizeof(buf), raon_fd) == 0 && !feof(raon_fd)) {
+      perror("Failed to read raon file");
+      return 2;
    }
+   fclose(raon_fd);
 
-   struct raon_parser parser = raon_parser_init(tokens);
-   struct raon_parser_vec *entries = raon_parser_parse(&parser);
-   if (!entries) {
-      puts("error parsing");
-      goto cleanup;
-   }
-
-   puts("==> finished parsing with no errors");
-
-cleanup:
-   if (entries)
-      raon_parser_vec_free(entries);
-   if (tokens)
-      raon_token_vec_free(tokens);
-   if (lex.str != NULL)
-      raon_lexer_free(&lex);
-
+   struct raon_lexer lex = raon_lexer_init(buf);
    return 0;
 }
