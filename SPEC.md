@@ -88,4 +88,11 @@ There's no real difference between a field identifier like `my_val` and a string
 therefore, the distinction doesn't matter.
 
 ### Dotted fields
-TODO
+A field with a dot is considered to be a field access. This means that `field.subfield = "value"` is syntax sure for:
+```c
+field = {
+  subfield = "value"
+}
+```
+
+Rationale: In config files often configuration is deeply nested. Having this shorthand is useful to avoid clutter and it also saves space and extra typing.
