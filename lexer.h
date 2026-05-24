@@ -44,6 +44,9 @@ struct raon_lexer {
 };
 
 struct raon_lexer raon_lexer_init(char *str);
+// Returns a token from the string the lexer was initialized with.
+// If the token type stores a string value, then an allocation will occur.
+// It is good practice to call `raon_token_free` once the token is no longer needed
 struct raon_token raon_lexer_eat(struct raon_lexer *self);
 
 #endif

@@ -1,4 +1,3 @@
-// TODO: free tokens after they're eaten by lexer
 #include "lexer.h"
 #include <ctype.h>
 #include <errno.h>
@@ -180,6 +179,13 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
    strncpy(token.str_val, ident, ident_len);
    token.str_val[ident_len] = '\0';
    return token;
+}
+
+void raon_token_free(struct raon_token *token) {
+   if (token->type == raon_token_type_field || token->type == raon_token_type_string) {
+      raon_free(token->str_val);
+      return;
+   }
 }
 
 struct raon_token raon_lexer_eat(struct raon_lexer *self) {

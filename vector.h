@@ -17,13 +17,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct G(vec_vector) {
+#ifndef VEC_IMPLEMENTATION
+
+typedef struct G(vector_of) {
    size_t capacity;
    size_t len;
    VEC_ITEM_TYPE *vec;
 } G(Vector_of);
-
-#ifndef VEC_IMPLEMENTATION
 
 G(Vector_of) * G(vec_new)(void);
 bool G(vec_fit)(G(Vector_of) *vec);

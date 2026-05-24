@@ -1,10 +1,11 @@
 # RAON Specification
 
 ```py
-entry  = (field "=" value)*
+entry  = (key "=" value)*
 block  = "{" entry* "}" 
-field  = (A-z | 0-9 | "-" | "_")* | int | string
+key = field | int | string
 value  = (string | bool | int | block | array) ("," | "\n")
+field  = (A-z | 0-9 | "-" | "_")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
 int    = "-"? 0-9*
@@ -88,7 +89,7 @@ There's no real difference between a field identifier like `my_val` and a string
 therefore, the distinction doesn't matter.
 
 ### Dotted fields
-A field with a dot is considered to be a field access. This means that `field.subfield = "value"` is syntax sure for:
+A field with a dot is considered to be a field access. This means that `field.subfield = "value"` is syntax sugar for:
 ```c
 field = {
   subfield = "value"
