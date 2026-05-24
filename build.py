@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import shutil
 import subprocess
 import sys
@@ -11,6 +12,12 @@ files = [
 ]
 
 libs = ["m"]
+
+sanitizers = [
+    "address",
+    "undefined",
+    "leak",
+]
 
 
 def find_compiler() -> str:
@@ -27,6 +34,10 @@ def get_flags() -> list[str]:
         flags.append("-O2")
     else:
         flags.append("-g")
+
+        if "-sanitize" in sys.argv:
+            for sanitizer in sanitizers:
+                flags.append(f"-fsanitize={sanitizer}")
 
     for lib in libs:
         flags.append(f"-l{lib}")

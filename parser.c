@@ -6,11 +6,11 @@
 #define VEC_IMPLEMENTATION
 #define VEC_ITEM_TYPE struct raon_value
 #define VEC_SUFFIX raon_value
-#include "vendored/vector.h"
+#include "vendor/vector.h"
 
 #define VEC_ITEM_TYPE struct raon_entry
 #define VEC_SUFFIX raon_entry
-#include "vendored/vector.h"
+#include "vendor/vector.h"
 
 // returns true on success
 bool raon_is_valid_separator(struct raon_lexer *lexer, struct raon_token first_token,
@@ -170,11 +170,15 @@ struct vector_of_raon_entry *raon_parse(char *str) {
    struct vector_of_raon_entry *entries = vec_new_raon_entry();
    for (;;) {
       struct raon_token token = raon_lexer_eat(&lexer);
-      if (token.type == raon_token_type_error || token.type == raon_token_type_eof) {
+      if (token.type == raon_token_type_eof) {
          break;
       }
       if (token.type == raon_token_type_newline) {
          continue;
+      }
+      if (token.type == raon_token_type_error) {
+         // TODO free every entry
+         return NULL;
       }
 
       struct raon_entry entry = raon_parse_entry(&lexer, token);
