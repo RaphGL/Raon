@@ -4,8 +4,8 @@
 file = (entry sep)*
 entry  = (key "=" value)*
 value  = (string | bool | int | block | array)
-block  = "{" (entry separator)* "}" 
-array  = "[" (value separator)* "]"
+block  = "{" (entry separator?)* "}" 
+array  = "[" (value separator?)* "]"
 key = field | int | string
 field  = (A-z | 0-9 | "-" | "_")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
@@ -98,4 +98,4 @@ field = {
 }
 ```
 
-Rationale: In config files often configuration is deeply nested. Having this shorthand is useful to avoid clutter and it also saves space and extra typing.
+**Rationale**: In config files often configuration is deeply nested. Having this shorthand is useful to avoid clutter and it also saves space and extra typing.

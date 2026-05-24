@@ -7,11 +7,11 @@
 
 #define VEC_ITEM_TYPE struct raon_value
 #define VEC_SUFFIX raon_value
-#include "vector.h"
+#include "vendored/vector.h"
 
 #define VEC_ITEM_TYPE struct raon_entry
 #define VEC_SUFFIX raon_entry
-#include "vector.h"
+#include "vendored/vector.h"
 
 enum raon_value_type {
    raon_value_type_string,
