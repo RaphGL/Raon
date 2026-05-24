@@ -1,15 +1,17 @@
 # RAON Specification
 
 ```py
+file = (entry sep)*
 entry  = (key "=" value)*
-block  = "{" entry* "}" 
+value  = (string | bool | int | block | array)
+block  = "{" (entry separator)* "}" 
+array  = "[" (value separator)* "]"
 key = field | int | string
-value  = (string | bool | int | block | array) ("," | "\n")
 field  = (A-z | 0-9 | "-" | "_")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
 int    = "-"? 0-9*
-array  = "[" value*  "]"
+separator = "," | "\n" # separator
 ```
 
 Grammar syntax:
