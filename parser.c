@@ -30,11 +30,6 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
       return error_val;
    }
 
-   if (first_token.type != raon_token_type_field && first_token.type != raon_token_type_int
-       && first_token.type != raon_token_type_string) {
-      return error_val;
-   }
-
    struct raon_token token = raon_lexer_eat(lexer);
    if (token.type != raon_token_type_equal) {
       return error_val;
@@ -128,9 +123,11 @@ struct vector_of_raon_entry *raon_parse_block(
          vec_free_raon_entry(entries);
          return NULL;
       }
-
       if (token.type == raon_token_type_block_close) {
          break;
+      }
+      if (token.type == raon_token_type_newline) {
+        continue;
       }
 
       struct raon_entry entry = raon_parse_entry(lexer, token);
@@ -146,14 +143,17 @@ struct vector_of_raon_entry *raon_parse_block(
 }
 
 // TODO: free tokens after they're used
-Vector_of_raon_entry raon_parse(char *str) {
+struct vector_of_raon_entry *raon_parse(char *str) {
    struct raon_lexer lexer = raon_lexer_init(str);
 
-   Vector_of_raon_entry *entries = vec_new_raon_entry();
+   struct vector_of_raon_entry *entries = vec_new_raon_entry();
    for (;;) {
       struct raon_token token = raon_lexer_eat(&lexer);
       if (token.type == raon_token_type_error || token.type == raon_token_type_eof) {
          break;
+      }
+      if (token.type == raon_token_type_newline) {
+        continue; 
       }
 
       struct raon_entry entry = raon_parse_entry(&lexer, token);
@@ -161,4 +161,6 @@ Vector_of_raon_entry raon_parse(char *str) {
          vec_push_raon_entry(entries, entry);
       }
    }
+
+   return entries;
 }

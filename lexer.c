@@ -17,14 +17,10 @@ struct raon_lexer raon_lexer_init(char *str) {
 }
 
 static char raon_lexer_peek_char(struct raon_lexer *self) {
-   if (!self->start) {
-      return self->str[self->idx];
-   }
-
-   if (self->idx + 1 >= self->str_len) {
+   if (self->idx >= self->str_len) {
       return '\0';
    }
-   return self->str[self->idx + 1];
+   return self->str[self->idx];
 }
 
 static char raon_lexer_eat_char(struct raon_lexer *self) {
@@ -74,7 +70,6 @@ static struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
       .start_line = self->line,
       .start_col = self->col,
    };
-   raon_lexer_eat_char(self);
 
    const size_t start_str = self->idx;
    while (raon_lexer_peek_char(self) != '\0') {
@@ -102,7 +97,6 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
    if (!isdigit(curr) && curr != '-') {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   raon_lexer_eat_char(self);
 
    struct raon_token token = {
       .type = raon_token_type_int,
@@ -111,6 +105,9 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
    };
 
    size_t start_int = self->idx;
+   if (raon_lexer_peek_char(self) == '-') {
+      raon_lexer_eat_char(self);
+   }
    while (isdigit(raon_lexer_peek_char(self))) {
       raon_lexer_eat_char(self);
    }
@@ -139,7 +136,6 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
    if (!isalpha(raon_lexer_peek_char(self))) {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   raon_lexer_eat_char(self);
 
    struct raon_token token = {
       .type = raon_token_type_field,
@@ -155,7 +151,7 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
       }
       raon_lexer_eat_char(self);
    }
-   size_t end_ident = self->idx;
+   size_t end_ident = self->idx - 1;
    size_t ident_len = end_ident - start_ident + 1;
    const char *ident = &self->str[start_ident];
 

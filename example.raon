@@ -1,5 +1,7 @@
 theme = "github_dark"
-tab_width = { spaces = 4,  convert-to-space = true }
+tab_width = {
+	spaces = 4,  convert-to-space = true
+}
 
 some_array = [-2, -1, 0, 1, 2, 3]
 

@@ -52,5 +52,6 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
 struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token first_token);
 struct vector_of_raon_value *raon_parse_array(struct raon_lexer *lexer, struct raon_token first_token);
 struct vector_of_raon_entry *raon_parse_block(struct raon_lexer *lexer, struct raon_token first_token);
+struct vector_of_raon_entry *raon_parse(char *str);
 
 #endif
