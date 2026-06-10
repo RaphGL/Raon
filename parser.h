@@ -25,7 +25,7 @@ enum raon_value_type {
 struct raon_value {
    enum raon_value_type type;
    union {
-      char *str_val;
+      struct raon_str_slice str_val;
       intptr_t int_val;
       bool bool_val;
       struct vector_of_raon_entry *block_val;
@@ -42,7 +42,7 @@ enum raon_key_type {
 struct raon_entry {
    enum raon_key_type field_type;
    union {
-      char *str_field;
+      struct raon_str_slice str_field;
       intptr_t int_field;
    };
    struct raon_value value;

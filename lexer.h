@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "str_slice.h"
 
 enum raon_token_type {
    // symbols
@@ -29,7 +30,7 @@ struct raon_token {
    size_t end_line, end_col;
    enum raon_token_type type;
    union {
-      char *str_val;
+      struct raon_str_slice str_val;
       intptr_t int_val;
       char char_val;
       bool bool_val;
@@ -47,7 +48,6 @@ struct raon_lexer raon_lexer_init(char *str);
 
 // Returns a token from the string the lexer was initialized with.
 // If the token type stores a string value, then an allocation will occur.
-// It is good practice to call `raon_token_free` once the token is no longer needed
 struct raon_token raon_lexer_eat(struct raon_lexer *self);
 
 #endif

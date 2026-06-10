@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "str_slice.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -82,13 +83,10 @@ static struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
    const size_t str_len = end_str - start_str;
    token.end_line = self->line;
    token.end_col = self->col;
-
-   token.str_val = raon_malloc(str_len + 1);
-   if (!token.str_val) {
+   token.str_val = raon_slice_from_str(&self->str[start_str], str_len);
+   if (!token.str_val.ptr) {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   strncpy(token.str_val, &self->str[start_str], str_len);
-   token.str_val[str_len] = '\0';
    return token;
 }
 
@@ -153,7 +151,7 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
    }
    size_t end_ident = self->idx - 1;
    size_t ident_len = end_ident - start_ident + 1;
-   const char *ident = &self->str[start_ident];
+   char *ident = &self->str[start_ident];
 
    if (strncmp(ident, "true", ident_len) == 0) {
       token.type = raon_token_type_bool;
@@ -168,20 +166,11 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
    }
 
    token.type = raon_token_type_field;
-   token.str_val = raon_malloc(ident_len + 1);
-   if (!token.str_val) {
+   token.str_val = raon_slice_from_str(ident, ident_len);
+   if (!token.str_val.ptr) {
       return (struct raon_token) { .type = raon_token_type_error };
    }
-   strncpy(token.str_val, ident, ident_len);
-   token.str_val[ident_len] = '\0';
    return token;
-}
-
-void raon_token_free(struct raon_token *token) {
-   if (token->type == raon_token_type_field || token->type == raon_token_type_string) {
-      raon_free(token->str_val);
-      return;
-   }
 }
 
 struct raon_token raon_lexer_eat(struct raon_lexer *self) {

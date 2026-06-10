@@ -162,7 +162,8 @@ struct vector_of_raon_entry *raon_parse_block(
    return entries;
 }
 
-// TODO: free tokens after they're used
+// TODO: populate vector with entries and 
+// TODO: make a function to free all of the AST stuff
 // TODO: return NULL when parsing fails
 struct vector_of_raon_entry *raon_parse(char *str) {
    struct raon_lexer lexer = raon_lexer_init(str);
@@ -177,7 +178,6 @@ struct vector_of_raon_entry *raon_parse(char *str) {
          continue;
       }
       if (token.type == raon_token_type_error) {
-         // TODO free every entry
          return NULL;
       }
 
