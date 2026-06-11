@@ -133,7 +133,6 @@ bool G(vec_get)(const G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE *des
 
 // Prints the vector with the specified format specifier
 void G(vec_printf)(const char *fmt, const G(Vector_of) * vec) {
-   // TODO
    printf("[");
    for (size_t i = 0; i < G(vec_len)(vec); i++) {
       printf(" ");

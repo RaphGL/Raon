@@ -191,24 +191,31 @@ struct raon_token raon_lexer_eat(struct raon_lexer *self) {
       case '#':
          raon_lexer_ignore_comment(self);
          break;
+
       case '\n':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN('\n', raon_token_type_newline);
+
       case '=':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN('=', raon_token_type_equal);
+
       case '{':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN('{', raon_token_type_block_open);
+
       case '}':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN('}', raon_token_type_block_close);
+
       case '[':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN('[', raon_token_type_array_open);
+
       case ']':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN(']', raon_token_type_array_close);
+
       case ',':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN(',', raon_token_type_comma);

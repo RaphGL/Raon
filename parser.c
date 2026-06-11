@@ -29,10 +29,12 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
       entry.field_type = raon_field_type_string;
       entry.str_field = first_token.str_val;
       break;
+
    case raon_token_type_int:
       entry.field_type = raon_field_type_int;
       entry.int_field = first_token.int_val;
       break;
+
    default:
       return error_val;
    }
@@ -62,22 +64,27 @@ struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token f
       val.type = raon_value_type_string;
       val.str_val = first_token.str_val;
       break;
+
    case raon_token_type_bool:
       val.type = raon_value_type_bool;
       val.bool_val = first_token.bool_val;
       break;
+
    case raon_token_type_int:
       val.type = raon_value_type_int;
       val.int_val = first_token.int_val;
       break;
+
    case raon_token_type_block_open:
       val.type = raon_value_type_block;
       val.block_val = raon_parse_block(lexer, first_token);
       break;
+
    case raon_token_type_array_open:
       val.type = raon_value_type_array;
       val.array_val = raon_parse_array(lexer, first_token);
       break;
+
    default:
       return error_val;
    }
@@ -162,7 +169,6 @@ struct vector_of_raon_entry *raon_parse_block(
    return entries;
 }
 
-// TODO: populate vector with entries and 
 // TODO: make a function to free all of the AST stuff
 // TODO: return NULL when parsing fails
 struct vector_of_raon_entry *raon_parse(char *str) {

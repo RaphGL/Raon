@@ -1,10 +1,10 @@
 #ifndef RAON_LEXER_H
 #define RAON_LEXER_H
 
+#include "str_slice.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "str_slice.h"
 
 enum raon_token_type {
    // symbols
