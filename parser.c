@@ -22,19 +22,19 @@ bool raon_is_valid_separator(
 }
 
 struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token first_token) {
-   const struct raon_entry error_val = { .field_type = raon_field_type_error };
+   const struct raon_entry error_val = { .key_type = raon_key_type_error };
 
    struct raon_entry entry = { 0 };
    switch (first_token.type) {
-   case raon_token_type_field:
+   case raon_token_type_key:
    case raon_token_type_string:
-      entry.field_type = raon_field_type_string;
-      entry.str_field = first_token.str_val;
+      entry.key_type = raon_key_type_string;
+      entry.str_key = first_token.str_val;
       break;
 
    case raon_token_type_int:
-      entry.field_type = raon_field_type_int;
-      entry.int_field = first_token.int_val;
+      entry.key_type = raon_key_type_int;
+      entry.int_key = first_token.int_val;
       break;
 
    default:
@@ -150,7 +150,7 @@ static bool raon_entry_types_match(struct vector_of_raon_entry *entries) {
    vec_get_raon_entry(entries, 0, &entry1);
    for (size_t i = 1; i < vec_len_raon_entry(entries); i++) {
       vec_get_raon_entry(entries, i, &entry2);
-      if (entry1.field_type != entry2.field_type) {
+      if (entry1.key_type != entry2.key_type) {
          return false;
       }
    }
@@ -179,7 +179,7 @@ struct vector_of_raon_entry *raon_parse_block(
       }
 
       struct raon_entry entry = raon_parse_entry(lexer, token);
-      if (entry.field_type == raon_field_type_error) {
+      if (entry.key_type == raon_key_type_error) {
          vec_free_raon_entry(entries);
          return NULL;
       }
@@ -292,11 +292,11 @@ void raon_print_array(struct vector_of_raon_value *array) {
 }
 
 void raon_print_entry(struct raon_entry entry) {
-   switch (entry.field_type) {
-   case raon_field_type_string: {
-      char *str = raon_str_from_slice(entry.str_field);
+   switch (entry.key_type) {
+   case raon_key_type_string: {
+      char *str = raon_str_from_slice(entry.str_key);
       bool contains_whitespace = false;
-      for (size_t i = 0; i < entry.str_field.len; i++) {
+      for (size_t i = 0; i < entry.str_key.len; i++) {
          if (isspace(str[i])) {
             contains_whitespace = true;
          }
@@ -311,11 +311,11 @@ void raon_print_entry(struct raon_entry entry) {
       free(str);
    } break;
 
-   case raon_field_type_int:
-      printf("%lu = ", entry.int_field);
+   case raon_key_type_int:
+      printf("%lu = ", entry.int_key);
       break;
 
-   case raon_field_type_error:
+   case raon_key_type_error:
       printf("(unsupported type) = ");
    }
 

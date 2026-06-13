@@ -60,22 +60,22 @@ cannot store any other type. So the example array here should be an error.
 Accepting any type in arrays would not map well to statically typed languages.
 
 ### Blocks
-Just like with arrays, the first type encountered in a block's field determines the type for the fields in the block.
+Just like with arrays, the first type encountered in a block's key determines the type for all keys in the block.
 
-Field identifiers and strings are both considered to be strings and therefore are valid.
+Fields and strings are both considered to be string keys, therefore they can be used together.
 
 So:
 ```c
 block = {
-  0 = "something",
-  1 = "something else",
+  something = true,  
+  "something else" = [1, 2, 3],
 }
 ```
 and
 ```c
 block = {
-  something = true,  
-  "something else" = [1, 2, 3],
+  0 = "something",
+  1 = "something else",
 }
 ```
 Are both valid.
@@ -94,10 +94,10 @@ There's no real difference between a field identifier like `my_val` and a string
 therefore, the distinction doesn't matter.
 
 ### Dotted fields
-A field with a dot is considered to be a field access. This means that `field.subfield = "value"` is syntax sugar for:
+A key with a dot is considered to be a field access. This means that `key.subkey = "value"` is syntax sugar for:
 ```c
-field = {
-  subfield = "value"
+key = {
+  subkey = "value"
 }
 ```
 

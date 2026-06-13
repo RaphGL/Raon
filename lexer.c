@@ -136,7 +136,7 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
    }
 
    struct raon_token token = {
-      .type = raon_token_type_field,
+      .type = raon_token_type_key,
       .start_line = self->line,
       .start_col = self->col,
    };
@@ -165,7 +165,7 @@ static struct raon_token raon_lexer_lex_ident(struct raon_lexer *self) {
       return token;
    }
 
-   token.type = raon_token_type_field;
+   token.type = raon_token_type_key;
    token.str_val = raon_slice_from_str(ident, ident_len);
    if (!token.str_val.ptr) {
       return (struct raon_token) { .type = raon_token_type_error };

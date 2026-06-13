@@ -18,7 +18,7 @@ enum raon_token_type {
    raon_token_type_eof,
    // value types
    raon_token_type_string,
-   raon_token_type_field,
+   raon_token_type_key,
    raon_token_type_bool,
    raon_token_type_int,
    // used to indicate that an error ocurred

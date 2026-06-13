@@ -34,16 +34,16 @@ struct raon_value {
 };
 
 enum raon_key_type {
-   raon_field_type_string,
-   raon_field_type_int,
-   raon_field_type_error,
+   raon_key_type_string,
+   raon_key_type_int,
+   raon_key_type_error,
 };
 
 struct raon_entry {
-   enum raon_key_type field_type;
+   enum raon_key_type key_type;
    union {
-      struct raon_str_slice str_field;
-      intptr_t int_field;
+      struct raon_str_slice str_key;
+      intptr_t int_key;
    };
    struct raon_value value;
 };
