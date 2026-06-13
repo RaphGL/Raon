@@ -126,7 +126,35 @@ struct vector_of_raon_value *raon_parse_array(
       }
    }
 
+   // do type checking
+   if (vec_len_raon_value(values) > 1) {
+      struct raon_value value1, value2;
+      vec_get_raon_value(values, 0, &value1);
+      for (size_t i = 1; i < vec_len_raon_value(values); i++) {
+         vec_get_raon_value(values, i, &value2);
+         if (value1.type != value2.type) {
+            vec_free_raon_value(values);
+            return NULL;
+         }
+      }
+   }
+
    return values;
+}
+
+static bool raon_entry_types_match(struct vector_of_raon_entry *entries) {
+   if (vec_len_raon_entry(entries) <= 1) {
+      return true;
+   }
+   struct raon_entry entry1, entry2;
+   vec_get_raon_entry(entries, 0, &entry1);
+   for (size_t i = 1; i < vec_len_raon_entry(entries); i++) {
+      vec_get_raon_entry(entries, i, &entry2);
+      if (entry1.field_type != entry2.field_type) {
+         return false;
+      }
+   }
+   return true;
 }
 
 struct vector_of_raon_entry *raon_parse_block(
@@ -168,6 +196,10 @@ struct vector_of_raon_entry *raon_parse_block(
       }
    }
 
+   if (!raon_entry_types_match(entries)) {
+      vec_free_raon_entry(entries);
+      return NULL;
+   }
    return entries;
 }
 
@@ -199,6 +231,11 @@ struct vector_of_raon_entry *raon_parse(char *str) {
       if (!raon_is_valid_separator(token, NULL)) {
          break;
       }
+   }
+
+   if (!raon_entry_types_match(entries)) {
+      // TODO: free entries AST
+      return NULL;
    }
 
    return entries;
@@ -237,6 +274,11 @@ void raon_print_value(struct raon_value value) {
 }
 
 void raon_print_array(struct vector_of_raon_value *array) {
+   if (!array) {
+      printf("[]");
+      return;
+   }
+
    printf("[");
    for (size_t i = 0; i < vec_len_raon_value(array); i++) {
       struct raon_value val;
@@ -261,20 +303,20 @@ void raon_print_entry(struct raon_entry entry) {
       }
 
       if (contains_whitespace) {
-         printf("\"%s\": ", str);
+         printf("\"%s\" = ", str);
       } else {
-         printf("%s: ", str);
+         printf("%s = ", str);
       }
 
       free(str);
    } break;
 
    case raon_field_type_int:
-      printf("%lu: ", entry.int_field);
+      printf("%lu = ", entry.int_field);
       break;
 
    case raon_field_type_error:
-      printf("(unsupported type): ");
+      printf("(unsupported type) = ");
    }
 
    raon_print_value(entry.value);
