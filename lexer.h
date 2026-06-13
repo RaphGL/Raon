@@ -11,6 +11,7 @@ enum raon_token_type {
    raon_token_type_equal,
    raon_token_type_newline,
    raon_token_type_comma,
+   raon_token_type_dot,
    raon_token_type_block_open,
    raon_token_type_block_close,
    raon_token_type_array_open,

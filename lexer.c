@@ -219,6 +219,10 @@ struct raon_token raon_lexer_eat(struct raon_lexer *self) {
       case ',':
          raon_lexer_eat_char(self);
          return RAON_ONE_CHAR_TOKEN(',', raon_token_type_comma);
+
+      case '.':
+         raon_lexer_eat_char(self);
+         return RAON_ONE_CHAR_TOKEN('.', raon_token_type_dot);
       }
 
       if (isspace(curr)) {

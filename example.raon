@@ -1,4 +1,3 @@
-theme = "github_dark"
 tab_width = {spaces = 4,  convert-to-space = true}
 
 some_array = [-2, -1, 0, 1, 2, 3]
@@ -26,6 +25,6 @@ editor = {
 	}
 }
 
-languages = { # comments are ignored until newline
-	python =  { language-server = "pyright" }
+languages.python =  {
+	language-server = "pyright" # comments are ignored until newline
 }

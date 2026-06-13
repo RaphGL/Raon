@@ -42,6 +42,18 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
    }
 
    struct raon_token token = raon_lexer_eat(lexer);
+   // if a <key>.<subkey> is found we just insert a single key into the block and move on
+   // there's no need for type checking as a vec_len(block) == 1 is always valid
+   if (token.type == raon_token_type_dot) {
+      token = raon_lexer_eat(lexer);
+      entry.value.type = raon_value_type_block;
+      entry.value.block_val = vec_new_raon_entry();
+      if (!entry.value.block_val) {
+         return error_val;
+      }
+      vec_push_raon_entry(entry.value.block_val, raon_parse_entry(lexer, token));
+      return entry;
+   }
    if (token.type != raon_token_type_equal) {
       return error_val;
    }
