@@ -19,6 +19,7 @@ int main(void) {
    struct vector_of_raon_entry *entries = raon_parse(buf);
    printf("Ret: %p\n", (void *)entries);
 
-   raon_print_entries(entries);
+   struct raon_print_ctx ctx = {0};
+   raon_print_entries(ctx, entries);
    return 0;
 }

@@ -241,7 +241,14 @@ struct vector_of_raon_entry *raon_parse(char *str) {
    return entries;
 }
 
-void raon_print_value(struct raon_value value) {
+static void raon_print_indentation(struct raon_print_ctx ctx) {
+   char *indent = ctx.indent ? ctx.indent : "   ";
+   for (size_t i = 0; i < ctx.indent_level; i++) {
+      printf("%s", indent);
+   }
+}
+
+void raon_print_value(struct raon_print_ctx ctx, struct raon_value value) {
    switch (value.type) {
    case raon_value_type_bool:
       printf("%s", value.bool_val ? "true" : "false");
@@ -258,12 +265,15 @@ void raon_print_value(struct raon_value value) {
    } break;
 
    case raon_value_type_array:
-      raon_print_array(value.array_val);
+      raon_print_array(ctx, value.array_val);
       break;
 
    case raon_value_type_block:
       printf("{\n");
-      raon_print_entries(value.block_val);
+      ++ctx.indent_level;
+      raon_print_entries(ctx, value.block_val);
+      --ctx.indent_level;
+      raon_print_indentation(ctx);
       printf("}");
       break;
 
@@ -273,7 +283,7 @@ void raon_print_value(struct raon_value value) {
    }
 }
 
-void raon_print_array(struct vector_of_raon_value *array) {
+void raon_print_array(struct raon_print_ctx ctx, struct vector_of_raon_value *array) {
    if (!array) {
       printf("[]");
       return;
@@ -283,7 +293,7 @@ void raon_print_array(struct vector_of_raon_value *array) {
    for (size_t i = 0; i < vec_len_raon_value(array); i++) {
       struct raon_value val;
       vec_get_raon_value(array, i, &val);
-      raon_print_value(val);
+      raon_print_value(ctx, val);
       if (i < vec_len_raon_value(array) - 1) {
          printf(", ");
       }
@@ -291,7 +301,8 @@ void raon_print_array(struct vector_of_raon_value *array) {
    printf("]");
 }
 
-void raon_print_entry(struct raon_entry entry) {
+void raon_print_entry(struct raon_print_ctx ctx, struct raon_entry entry) {
+   raon_print_indentation(ctx);
    switch (entry.key_type) {
    case raon_key_type_string: {
       char *str = raon_str_from_slice(entry.str_key);
@@ -319,14 +330,14 @@ void raon_print_entry(struct raon_entry entry) {
       printf("(unsupported type) = ");
    }
 
-   raon_print_value(entry.value);
+   raon_print_value(ctx, entry.value);
    printf("\n");
 }
 
-void raon_print_entries(struct vector_of_raon_entry *entries) {
+void raon_print_entries(struct raon_print_ctx ctx, struct vector_of_raon_entry *entries) {
    for (size_t i = 0; i < vec_len_raon_entry(entries); i++) {
       struct raon_entry entry;
       vec_get_raon_entry(entries, i, &entry);
-      raon_print_entry(entry);
+      raon_print_entry(ctx, entry);
    }
 }
