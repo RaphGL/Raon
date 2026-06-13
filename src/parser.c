@@ -8,11 +8,11 @@
 #define VEC_IMPLEMENTATION
 #define VEC_ITEM_TYPE struct raon_value
 #define VEC_SUFFIX raon_value
-#include "vendor/vector.h"
+#include "../vendor/vector.h"
 
 #define VEC_ITEM_TYPE struct raon_entry
 #define VEC_SUFFIX raon_entry
-#include "vendor/vector.h"
+#include "../vendor/vector.h"
 
 // returns true on success
 bool raon_is_valid_separator(

@@ -6,10 +6,10 @@ import sys
 cflags = ["-Wall", "-Wextra", "-pedantic", "-std=c11"]
 
 files = [
-    "./parser.c",
-    "./lexer.c",
-    "./main.c",
-    "./str_slice.c",
+    "./src/parser.c",
+    "./src/lexer.c",
+    "./src/str_slice.c",
+    "./test.c"
 ]
 
 libs = ["m"]
