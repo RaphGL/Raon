@@ -14,7 +14,7 @@
 #endif
 
 struct raon_lexer raon_lexer_init(char *str) {
-   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .start = false };
+   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .start = false, .line = 1};
 }
 
 static char raon_lexer_peek_char(struct raon_lexer *self) {
