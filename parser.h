@@ -54,4 +54,8 @@ struct vector_of_raon_value *raon_parse_array(struct raon_lexer *lexer, struct r
 struct vector_of_raon_entry *raon_parse_block(struct raon_lexer *lexer, struct raon_token first_token);
 struct vector_of_raon_entry *raon_parse(char *str);
 
+void raon_print_entry(struct raon_entry entry);
+void raon_print_value(struct raon_value value);
+void raon_print_array(struct vector_of_raon_value *array);
+void raon_print_entries(struct vector_of_raon_entry *entries);
 #endif

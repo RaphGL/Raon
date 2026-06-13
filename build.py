@@ -9,6 +9,7 @@ files = [
     "./parser.c",
     "./lexer.c",
     "./main.c",
+    "./str_slice.c",
 ]
 
 libs = ["m"]

@@ -1,5 +1,7 @@
 #include "parser.h"
 #include "lexer.h"
+#include "str_slice.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -13,8 +15,8 @@
 #include "vendor/vector.h"
 
 // returns true on success
-bool raon_is_valid_separator(struct raon_lexer *lexer, struct raon_token first_token,
-    const enum raon_token_type *optional_separator) {
+bool raon_is_valid_separator(
+    struct raon_token first_token, const enum raon_token_type *optional_separator) {
    return first_token.type == raon_token_type_newline || first_token.type == raon_token_type_comma
        || (optional_separator != NULL && first_token.type == *optional_separator);
 }
@@ -115,7 +117,7 @@ struct vector_of_raon_value *raon_parse_array(
 
       token = raon_lexer_eat(lexer);
       const enum raon_token_type array_close = raon_token_type_array_close;
-      if (!raon_is_valid_separator(lexer, token, &array_close)) {
+      if (!raon_is_valid_separator(token, &array_close)) {
          vec_free_raon_value(values);
          return NULL;
       }
@@ -157,7 +159,7 @@ struct vector_of_raon_entry *raon_parse_block(
 
       token = raon_lexer_eat(lexer);
       const enum raon_token_type block_close = raon_token_type_block_close;
-      if (!raon_is_valid_separator(lexer, token, &block_close)) {
+      if (!raon_is_valid_separator(token, &block_close)) {
          vec_free_raon_entry(entries);
          return NULL;
       }
@@ -194,10 +196,95 @@ struct vector_of_raon_entry *raon_parse(char *str) {
 
       token = raon_lexer_eat(&lexer);
 
-      if (!raon_is_valid_separator(&lexer, token, NULL)) {
+      if (!raon_is_valid_separator(token, NULL)) {
          break;
       }
    }
 
    return entries;
+}
+
+void raon_print_value(struct raon_value value) {
+   switch (value.type) {
+   case raon_value_type_bool:
+      printf("%s", value.bool_val ? "true" : "false");
+      break;
+
+   case raon_value_type_int:
+      printf("%ld", value.int_val);
+      break;
+
+   case raon_value_type_string: {
+      char *str = raon_str_from_slice(value.str_val);
+      printf("\"%s\"", str);
+      free(str);
+   } break;
+
+   case raon_value_type_array:
+      raon_print_array(value.array_val);
+      break;
+
+   case raon_value_type_block:
+      printf("{\n");
+      raon_print_entries(value.block_val);
+      printf("}");
+      break;
+
+   case raon_value_type_error:
+      printf("(unsupported type)");
+      break;
+   }
+}
+
+void raon_print_array(struct vector_of_raon_value *array) {
+   printf("[");
+   for (size_t i = 0; i < vec_len_raon_value(array); i++) {
+      struct raon_value val;
+      vec_get_raon_value(array, i, &val);
+      raon_print_value(val);
+      if (i < vec_len_raon_value(array) - 1) {
+         printf(", ");
+      }
+   }
+   printf("]");
+}
+
+void raon_print_entry(struct raon_entry entry) {
+   switch (entry.field_type) {
+   case raon_field_type_string: {
+      char *str = raon_str_from_slice(entry.str_field);
+      bool contains_whitespace = false;
+      for (size_t i = 0; i < entry.str_field.len; i++) {
+         if (isspace(str[i])) {
+            contains_whitespace = true;
+         }
+      }
+
+      if (contains_whitespace) {
+         printf("\"%s\": ", str);
+      } else {
+         printf("%s: ", str);
+      }
+
+      free(str);
+   } break;
+
+   case raon_field_type_int:
+      printf("%lu: ", entry.int_field);
+      break;
+
+   case raon_field_type_error:
+      printf("(unsupported type): ");
+   }
+
+   raon_print_value(entry.value);
+   printf("\n");
+}
+
+void raon_print_entries(struct vector_of_raon_entry *entries) {
+   for (size_t i = 0; i < vec_len_raon_entry(entries); i++) {
+      struct raon_entry entry;
+      vec_get_raon_entry(entries, i, &entry);
+      raon_print_entry(entry);
+   }
 }
