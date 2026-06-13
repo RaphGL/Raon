@@ -54,6 +54,9 @@ struct vector_of_raon_value *raon_parse_array(struct raon_lexer *lexer, struct r
 struct vector_of_raon_entry *raon_parse_block(struct raon_lexer *lexer, struct raon_token first_token);
 struct vector_of_raon_entry *raon_parse(char *str);
 
+void raon_free_values(struct vector_of_raon_value *values);
+void raon_free_entries(struct vector_of_raon_entry *entries);
+
 struct raon_print_ctx {
    char *indent;
    size_t indent_level;

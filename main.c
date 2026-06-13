@@ -22,6 +22,7 @@ int main(void) {
    struct raon_print_ctx ctx = {0};
    raon_print_entries(ctx, entries);
 
+   raon_free_entries(entries);
    fclose(fd);
    return 0;
 }

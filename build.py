@@ -31,10 +31,11 @@ def find_compiler() -> str:
 
 def get_flags() -> list[str]:
     flags = [*cflags]
-    if "-mode:release" in sys.argv:
+    if "release" in sys.argv:
         flags.append("-O2")
     else:
-        flags.append("-g")
+        if "-sanitize" in sys.argv or "debug" in sys.argv:
+            flags.append("-g")
 
         if "-sanitize" in sys.argv:
             for sanitizer in sanitizers:

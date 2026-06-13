@@ -154,6 +154,48 @@ struct vector_of_raon_value *raon_parse_array(
    return values;
 }
 
+void raon_free_values(struct vector_of_raon_value *values) {
+   for (size_t i = 0; i < vec_len_raon_value(values); i++) {
+      struct raon_value value;
+      vec_get_raon_value(values, i, &value);
+      switch (value.type) {
+      case raon_value_type_array:
+         raon_free_values(value.array_val);
+         break;
+
+      case raon_value_type_block:
+         raon_free_entries(value.block_val);
+         break;
+
+      default:
+         // do nothing
+         break;
+      }
+   }
+   vec_free_raon_value(values);
+}
+
+void raon_free_entries(struct vector_of_raon_entry *entries) {
+   for (size_t i = 0; i < vec_len_raon_entry(entries); i++) {
+      struct raon_entry entry;
+      vec_get_raon_entry(entries, i, &entry);
+      switch (entry.value.type) {
+      case raon_value_type_block:
+         raon_free_entries(entry.value.block_val);
+         break;
+
+      case raon_value_type_array:
+         raon_free_values(entry.value.array_val);
+         break;
+
+      default:
+         // do nothing
+         break;
+      }
+   }
+   vec_free_raon_entry(entries);
+}
+
 static bool raon_entry_types_match(struct vector_of_raon_entry *entries) {
    if (vec_len_raon_entry(entries) <= 1) {
       return true;
@@ -347,6 +389,10 @@ void raon_print_entry(struct raon_print_ctx ctx, struct raon_entry entry) {
 }
 
 void raon_print_entries(struct raon_print_ctx ctx, struct vector_of_raon_entry *entries) {
+   if (!entries) {
+      printf("(null)");
+      return;
+   }
    for (size_t i = 0; i < vec_len_raon_entry(entries); i++) {
       struct raon_entry entry;
       vec_get_raon_entry(entries, i, &entry);
