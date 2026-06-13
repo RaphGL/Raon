@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "str_slice.h"
 #include <stdio.h>
 
 int main(void) {

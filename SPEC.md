@@ -1,17 +1,20 @@
 # RAON Specification
 
-```py
-file = (entry sep)*
-entry  = (key "=" value)*
+```grammar
+file = (entry separator)*
+entry  = key "=" value
 value  = (string | bool | int | block | array)
-block  = "{" (entry separator?)* "}" 
-array  = "[" (value separator?)* "]"
+block  = "{" (entry separator)* "}" 
+array  = "[" (value separator)* "]"
 key = field | int | string
 field  = (A-z | 0-9 | "-" | "_")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
 int    = "-"? 0-9*
-separator = "," | "\n" # separator
+separator = "," | "\n" | end_char
+
+# end_char here means the ending character for arrays or blocks
+# this is so that arrays or blocks can be inlined without trailing commas
 ```
 
 Grammar syntax:
@@ -51,15 +54,15 @@ Single quotes (`'`) cannot be used to represent strings.
 Arrays cannot contain more than one type. They're homogenous.
 The first item in the array determines what the type of the array is.
 If there's an array `[2, "value", { name = "name" }]`, the first item (`2`) is an int. Therefore the array is of type int and
-cannot store any other type. So this should be an error.
+cannot store any other type. So the example array here should be an error.
 
-**Rationale:** Homogenous types make for more predictable input, it's easy for the machine and for users to understand.
-It also makes it much easier to simply copy the array directly to any language's builtin array type. If it were dynamic
-it would be harder to do this in statically typed languages.
+**Rationale:** Homogenous types are consistent and easy to use in both static and dynamic typed languages.
+Accepting any type in arrays would not map well to statically typed languages.
 
 ### Blocks
-Just like with arrays, the first type encounted in a block determines the type for the fields in the block.
-The one exception is that both a normal field identifier and a string are considered as a string field.
+Just like with arrays, the first type encountered in a block's field determines the type for the fields in the block.
+
+Field identifiers and strings are both considered to be strings and therefore are valid.
 
 So:
 ```c
