@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifndef raon_malloc
@@ -14,7 +15,7 @@
 #endif
 
 struct raon_lexer raon_lexer_init(char *str) {
-   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .start = false, .line = 1};
+   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .start = false, .line = 1 };
 }
 
 static char raon_lexer_peek_char(struct raon_lexer *self) {
@@ -91,9 +92,10 @@ static struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
 }
 
 static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
+   struct raon_token error_val = { .type = raon_token_type_error };
    char curr = raon_lexer_peek_char(self);
    if (!isdigit(curr) && curr != '-') {
-      return (struct raon_token) { .type = raon_token_type_error };
+      return error_val;
    }
 
    struct raon_token token = {
@@ -108,6 +110,13 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
    }
    while (isdigit(raon_lexer_peek_char(self))) {
       raon_lexer_eat_char(self);
+      if (raon_lexer_peek_char(self) == '_') {
+         raon_lexer_eat_char(self);
+      }
+   }
+   // trailing number separators are not allowed
+   if (self->str[self->idx - 1] == '_') {
+      return error_val;
    }
    size_t end_int = self->idx;
    size_t int_len = end_int - start_int + 1;
@@ -116,15 +125,24 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
 
    char *int_str = raon_malloc(int_len + 1);
    if (!int_str) {
-      return (struct raon_token) { .type = raon_token_type_error };
+      return error_val;
    }
-   strncpy(int_str, &self->str[start_int], int_len);
+
+   // ignore number separators
+   char *int_slice = &self->str[start_int];
+   size_t int_str_idx = 0;
+   for (size_t i = 0; i < int_len; i++) {
+      if (int_slice[i] == '_') {
+         continue;
+      }
+      int_str[int_str_idx++] = int_slice[i];
+   }
    int_str[int_len] = '\0';
 
    errno = 0;
    token.int_val = strtoll(int_str, NULL, 10);
    if (errno == EINVAL || errno == ERANGE) {
-      return (struct raon_token) { .type = raon_token_type_error };
+      return error_val;
    }
    raon_free(int_str);
    return token;
