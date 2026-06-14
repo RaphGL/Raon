@@ -105,14 +105,46 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
    };
 
    size_t start_int = self->idx;
-   if (raon_lexer_peek_char(self) == '-') {
+
+   enum int_type {
+      int_type_hex,
+      int_type_decimal,
+      int_type_octal,
+      int_type_binary,
+   } int_type = int_type_decimal;
+
+   curr = raon_lexer_peek_char(self);
+   if (curr == '-') {
       raon_lexer_eat_char(self);
-   }
-   while (isdigit(raon_lexer_peek_char(self))) {
+   } else if (curr == '0') {
       raon_lexer_eat_char(self);
-      if (raon_lexer_peek_char(self) == '_') {
+      curr = raon_lexer_peek_char(self);
+
+      if (curr == 'b' || curr == 'o' || curr == 'x') {
          raon_lexer_eat_char(self);
+         switch (curr) {
+         case 'b':
+            int_type = int_type_binary;
+            raon_lexer_eat_char(self);
+            break;
+
+         case 'o':
+            int_type = int_type_octal;
+            raon_lexer_eat_char(self);
+            break;
+
+         case 'x':
+            int_type = int_type_hex;
+            raon_lexer_eat_char(self);
+            break;
+         }
       }
+   }
+
+   for (char next = raon_lexer_peek_char(self);
+       isdigit(next) || next == '_' || (next >= 'A' && next <= 'F' || next >= 'a' && next <= 'f');
+       next = raon_lexer_peek_char(self)) {
+      raon_lexer_eat_char(self);
    }
    // trailing number separators are not allowed
    if (self->str[self->idx - 1] == '_') {
@@ -140,7 +172,23 @@ static struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
    int_str[int_len] = '\0';
 
    errno = 0;
-   token.int_val = strtoll(int_str, NULL, 10);
+   switch (int_type) {
+   case int_type_binary:
+      token.int_val = strtoll(int_str + 2, NULL, 2);
+      break;
+
+   case int_type_octal:
+      token.int_val = strtoll(int_str + 2, NULL, 8);
+      break;
+
+   case int_type_decimal:
+      token.int_val = strtoll(int_str, NULL, 10);
+      break;
+
+   case int_type_hex:
+      token.int_val = strtoll(int_str + 2, NULL, 16);
+      break;
+   }
    if (errno == EINVAL || errno == ERANGE) {
       return error_val;
    }

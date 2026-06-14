@@ -50,7 +50,7 @@ Single quotes (`'`) cannot be used to represent strings.
 
 **Rationale:** Having more than one syntax for strings is a waste of time.
 
-# Integers
+### Integers
 Integers are signed integer numbers that are ideally the same size as the highest addressable size in the system, usually `intptr_t` or `isize` in various languages.
 
 Integer literals support number separators using `_`. So `100000` and `100_000` are both valid and mean the same thing.
