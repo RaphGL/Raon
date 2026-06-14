@@ -18,7 +18,7 @@
   <a href="https://github.com/RaphGL/Raon/issues">Request Feature</a>
 </p>
 
-Raon stand's for Raph's Object Notation but it also means "happy" or "joyful" in Korean.
+Raon stands for Raph's Object Notation but it also means "happy" or "joyful" in Korean.
 
 Raon is a portable serialization format inspired by formats such as JSON, TOML and KDL. It is meant to be:
 - intuitive: people should generally just understand what is going on without having to learn anything new
@@ -26,13 +26,13 @@ Raon is a portable serialization format inspired by formats such as JSON, TOML a
 - expressive: if you need to express nested data, you should be able to do so without verbosity
 
 ## Raon vs TOML
-While the project goal is not to be one-to-one translatable with other formats. Raon is almost 100% compatible with TOML minus some data types that raon does not support.
-Here's stripped down example from the ripgrep repo in both TOML and RAON:
+While the project's goal is not to just provide a subset/superset of another format. Raon is still mostly compatible, except for certain data types that TOML supports and Raon doesn't.
+Here's a stripped down example from the ripgrep repo in both TOML and Raon:
 
 ```toml
 [package]
 name = "grep-cli"
-version = "0.1.12"  #:version
+version = "0.1.12" #:version
 license = "Unlicense OR MIT"
 edition = "2024"
 
@@ -52,8 +52,7 @@ version = "0.2.148"
 ```toml
 package = {
   name = "grep-cli"
-  version = "0.1.12"
-  documentation = "https://docs.rs/grep-cli"
+  version = "0.1.12" #:version
   license = "Unlicense OR MIT"
   edition = "2024"
 }

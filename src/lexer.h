@@ -39,7 +39,6 @@ struct raon_token {
 };
 
 struct raon_lexer {
-   bool start;
    size_t line, col;
    size_t idx, str_len;
    char *str;
@@ -50,5 +49,11 @@ struct raon_lexer raon_lexer_init(char *str);
 // Returns a token from the string the lexer was initialized with.
 // If the token type stores a string value, then an allocation will occur.
 struct raon_token raon_lexer_eat(struct raon_lexer *self);
+
+struct raon_token raon_lexer_lex_int(struct raon_lexer *self);
+struct raon_token raon_lexer_lex_string(struct raon_lexer *self);
+struct raon_token raon_lexer_lex_ident(struct raon_lexer *self);
+
+static void raon_lexer_ignore_comment(struct raon_lexer *self);
 
 #endif
