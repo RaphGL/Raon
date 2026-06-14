@@ -26,7 +26,7 @@ Raon is a portable serialization format inspired by formats such as JSON, TOML a
 - expressive: if you need to express nested data, you should be able to do so without verbosity
 
 ## Raon vs TOML
-While the project's goal is not to just provide a subset/superset of another format. Raon is still mostly compatible, except for certain data types that TOML supports and Raon doesn't.
+While the project's goal is not to just provide a subset/superset of another format. Raon is still mostly compatible with TOML, except for certain data types that TOML supports and Raon doesn't.
 Here's a stripped down example from the ripgrep repo in both TOML and Raon:
 
 ```toml
