@@ -30,6 +30,7 @@ While the project goal is not to be one-to-one translatable with other formats. 
 Here's stripped down example from the ripgrep repo in both TOML and RAON:
 
 ```toml
+[package]
 name = "grep-cli"
 version = "0.1.12"  #:version
 license = "Unlicense OR MIT"
