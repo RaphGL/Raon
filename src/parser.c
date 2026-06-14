@@ -313,9 +313,8 @@ void raon_print_value(struct raon_print_ctx ctx, struct raon_value value) {
       break;
 
    case raon_value_type_string: {
-      char *str = raon_str_from_slice(value.str_val);
-      printf("\"%s\"", str);
-      free(str);
+      struct raon_str_slice str = value.str_val;
+      printf("\"%.*s\"", (int)str.len, str.ptr);
    } break;
 
    case raon_value_type_array:
@@ -359,21 +358,19 @@ void raon_print_entry(struct raon_print_ctx ctx, struct raon_entry entry) {
    raon_print_indentation(ctx);
    switch (entry.key_type) {
    case raon_key_type_string: {
-      char *str = raon_str_from_slice(entry.str_key);
+      struct raon_str_slice str = entry.str_key;
       bool contains_whitespace = false;
       for (size_t i = 0; i < entry.str_key.len; i++) {
-         if (isspace(str[i])) {
+         if (isspace(str.ptr[i])) {
             contains_whitespace = true;
          }
       }
 
       if (contains_whitespace) {
-         printf("\"%s\" = ", str);
+         printf("\"%.*s\" = ", (int)str.len, str.ptr);
       } else {
-         printf("%s = ", str);
+         printf("%.*s = ", (int)str.len, str.ptr);
       }
-
-      free(str);
    } break;
 
    case raon_key_type_int:
