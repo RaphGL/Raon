@@ -2,7 +2,7 @@
 
 ```grammar
 file = (entry separator)*
-entry  = key "=" value
+entry  = key ("." key)* "=" value
 value  = (string | bool | int | block | array)
 block  = "{" (entry separator)* "}" 
 array  = "[" (value separator)* "]"
