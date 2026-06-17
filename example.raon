@@ -1,5 +1,7 @@
 tab_width = {spaces = 4,  convert-to-space = true}
 
+float_num = 5.2
+
 some_array = [-2, -1, 0, 1, 2, 3]
 
 sparse_array = {

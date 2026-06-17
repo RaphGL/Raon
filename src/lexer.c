@@ -31,7 +31,7 @@ static char raon_lexer_eat_char(struct raon_lexer *self) {
    }
 
    char curr = self->str[self->idx];
-      ++self->idx;
+   ++self->idx;
 
    if (curr == '\n') {
       ++self->line;
@@ -58,7 +58,7 @@ void raon_lexer_ignore_comment(struct raon_lexer *self) {
 }
 
 struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
-      struct raon_token error_val = { .type = raon_token_type_error };
+   struct raon_token error_val = { .type = raon_token_type_error };
    if (raon_lexer_peek_char(self) != '"') {
       return error_val;
    }
@@ -89,7 +89,7 @@ struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
    return token;
 }
 
-struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
+struct raon_token raon_lexer_lex_num(struct raon_lexer *self) {
    struct raon_token error_val = { .type = raon_token_type_error };
    char curr = raon_lexer_peek_char(self);
    if (!isdigit(curr) && curr != '-') {
@@ -104,12 +104,13 @@ struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
 
    size_t start_int = self->idx;
 
-   enum int_type {
-      int_type_hex,
-      int_type_decimal,
-      int_type_octal,
-      int_type_binary,
-   } int_type = int_type_decimal;
+   enum num_type {
+      num_type_hex,
+      num_type_decimal,
+      num_type_octal,
+      num_type_binary,
+      num_type_float,
+   } int_type = num_type_decimal;
 
    curr = raon_lexer_peek_char(self);
    if (curr == '-') {
@@ -122,39 +123,54 @@ struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
          raon_lexer_eat_char(self);
          switch (curr) {
          case 'b':
-            int_type = int_type_binary;
+            int_type = num_type_binary;
             raon_lexer_eat_char(self);
             break;
 
          case 'o':
-            int_type = int_type_octal;
+            int_type = num_type_octal;
             raon_lexer_eat_char(self);
             break;
 
          case 'x':
-            int_type = int_type_hex;
+            int_type = num_type_hex;
             raon_lexer_eat_char(self);
             break;
          }
       }
    }
 
-   for (char next = raon_lexer_peek_char(self);
-       isdigit(next) || next == '_' || (next >= 'A' && next <= 'F' || next >= 'a' && next <= 'f');
+   size_t dot_count = 0;
+
+   for (char next = raon_lexer_peek_char(self); isdigit(next) || next == '_'
+       || (next >= 'A' && next <= 'F' || next >= 'a' && next <= 'f' || next == '.');
        next = raon_lexer_peek_char(self)) {
-      raon_lexer_eat_char(self);
+      if (raon_lexer_eat_char(self) == '.') {
+         ++dot_count;
+      }
    }
+
+   // floating points can only have one dot
+   if (dot_count > 1) {
+      return error_val;
+   }
+   if (dot_count == 1) {
+      int_type = num_type_float;
+      token.type = raon_token_type_float;
+   }
+
    // trailing number separators are not allowed
    if (self->str[self->idx - 1] == '_') {
       return error_val;
    }
+
    size_t end_int = self->idx;
    size_t int_len = end_int - start_int + 1;
    token.end_col = self->col;
    token.end_line = self->line;
 
-   char *int_str = raon_malloc(int_len + 1);
-   if (!int_str) {
+   char *num_str = raon_malloc(int_len + 1);
+   if (!num_str) {
       return error_val;
    }
 
@@ -165,32 +181,36 @@ struct raon_token raon_lexer_lex_int(struct raon_lexer *self) {
       if (int_slice[i] == '_') {
          continue;
       }
-      int_str[int_str_idx++] = int_slice[i];
+      num_str[int_str_idx++] = int_slice[i];
    }
-   int_str[int_len] = '\0';
+   num_str[int_len] = '\0';
 
    errno = 0;
    switch (int_type) {
-   case int_type_binary:
-      token.int_val = strtoll(int_str + 2, NULL, 2);
+   case num_type_binary:
+      token.int_val = strtoll(num_str + 2, NULL, 2);
       break;
 
-   case int_type_octal:
-      token.int_val = strtoll(int_str + 2, NULL, 8);
+   case num_type_octal:
+      token.int_val = strtoll(num_str + 2, NULL, 8);
       break;
 
-   case int_type_decimal:
-      token.int_val = strtoll(int_str, NULL, 10);
+   case num_type_decimal:
+      token.int_val = strtoll(num_str, NULL, 10);
       break;
 
-   case int_type_hex:
-      token.int_val = strtoll(int_str + 2, NULL, 16);
+   case num_type_hex:
+      token.int_val = strtoll(num_str + 2, NULL, 16);
+      break;
+
+   case num_type_float:
+      token.float_val = strtod(num_str, NULL);
       break;
    }
    if (errno == EINVAL || errno == ERANGE) {
       return error_val;
    }
-   raon_free(int_str);
+   raon_free(num_str);
    return token;
 }
 
@@ -300,7 +320,7 @@ struct raon_token raon_lexer_eat(struct raon_lexer *self) {
          return curr_token;
       }
 
-      curr_token = raon_lexer_lex_int(self);
+      curr_token = raon_lexer_lex_num(self);
       if (curr_token.type != raon_token_type_error) {
          return curr_token;
       }

@@ -6,17 +6,18 @@ entry_list = (entry separator)*
 block  = "{" entry_list "}" 
 array  = "[" (value separator)* "]"
 
-key = ident | int | string
-value  = (string | bool | int | block | array)
+key = ident | num | string
+value  = (string | bool | num | block | array)
 ident  = (A-z | 0-9 | "-" | "_")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
 
-int    = hex_int | octal_int | decimal_int | binary_int
-hex_int = "0x" (A-f)*
-octal_int = "0o" (0-7)*
-decimal_int = "-"? (0-9)*
-binary_int = "0b" (0-1)*
+num    = hex_num | octal_num | decimal_num | binary_num
+hex_num = "0x" (A-f)*
+octal_num = "0o" (0-7)*
+decimal_num = "-"? (0-9)*
+binary_num = "0b" (0-1)*
+float_num = "-" (0-9)* "." (0-9)*
 
 # end_char here means the ending character for arrays or blocks
 # it only is valid when closing an array or a block
@@ -43,14 +44,11 @@ A raon file should always start with an entry list. A top-level block or array l
 ### Primitive types
 There's only 5 types in Raon:
 - int: represents signed integers, it should ideally be the highest indexable size in the system (`intptr_t` in C or `isize` in many other languages)
+- float: should ideally represent a float64 number (usually `double` or `f64` in many languages)
 - bool: represents a boolean type
 - string: any valid language unicode character
 - array: an array of items of one of the types
 - block: an associative array whose values are of the other types
-
-**Rationale:** Floats are not part of the language because they're complicated, I don't really want to make Raon harder to implement.
-People would also start asking for scientific notation and whatnot. If you really really need to use other formats like floats, scienfitic
-notation, dates and whatnot, just use a string. A string can be anything you like, you can then parse/validate it in your program.
 
 ### Comments
 They start with a `#` and stop once a newline is found.

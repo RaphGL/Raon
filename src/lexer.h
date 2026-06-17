@@ -22,6 +22,7 @@ enum raon_token_type {
    raon_token_type_key,
    raon_token_type_bool,
    raon_token_type_int,
+   raon_token_type_float,
    // used to indicate that an error ocurred
    raon_token_type_error,
 };
@@ -35,6 +36,7 @@ struct raon_token {
       intptr_t int_val;
       char char_val;
       bool bool_val;
+      double float_val;
    };
 };
 
@@ -50,7 +52,7 @@ struct raon_lexer raon_lexer_init(char *str);
 // If the token type stores a string value, then an allocation will occur.
 struct raon_token raon_lexer_eat(struct raon_lexer *self);
 
-struct raon_token raon_lexer_lex_int(struct raon_lexer *self);
+struct raon_token raon_lexer_lex_num(struct raon_lexer *self);
 struct raon_token raon_lexer_lex_string(struct raon_lexer *self);
 struct raon_token raon_lexer_lex_ident(struct raon_lexer *self);
 

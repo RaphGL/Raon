@@ -84,6 +84,11 @@ struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token f
       val.bool_val = first_token.bool_val;
       break;
 
+   case raon_token_type_float:
+      val.type = raon_value_type_float;
+      val.float_val = first_token.float_val;
+      break;
+
    case raon_token_type_int:
       val.type = raon_value_type_int;
       val.int_val = first_token.int_val;
@@ -310,6 +315,10 @@ void raon_print_value(struct raon_print_ctx ctx, struct raon_value value) {
 
    case raon_value_type_int:
       printf("%ld", value.int_val);
+      break;
+
+   case raon_value_type_float:
+      printf("%lf", value.float_val);
       break;
 
    case raon_value_type_string: {

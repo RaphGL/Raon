@@ -29,9 +29,13 @@ void test_int_values() {
       { "int separator", "10_000", true },
       { "int trailing separator", "10_000_", false },
       { "int starting separator", "_10_000", false },
+      { "positive float", "0.5", true },
+      { "negative float", "-0.5", true },
+      { "double float", "0.5.1", false },
+      { "negative double float", "-0.5.1", false },
    };
 
-   run_lexer_test(raon_lexer_lex_int);
+   run_lexer_test(raon_lexer_lex_num);
 }
 
 void test_string_values(void) {
@@ -45,12 +49,12 @@ void test_string_values(void) {
 
 void test_ident_values(void) {
    struct unit_test inputs[] = {
-     {"false boolean", "false", true} ,
-     {"true boolean", "true", true},
-     {"snake case identifier", "some_identifier_key", true},
-     {"snake case identifier 2", "_some_identifier_key", true},
-     {"lisp case identifier", "some-identifier-key", true},
-     {"wrong lisp case", "-some-identifier-key", false},
+      { "false boolean", "false", true },
+      { "true boolean", "true", true },
+      { "snake case identifier", "some_identifier_key", true },
+      { "snake case identifier 2", "_some_identifier_key", true },
+      { "lisp case identifier", "some-identifier-key", true },
+      { "wrong lisp case", "-some-identifier-key", false },
    };
 
    run_lexer_test(raon_lexer_lex_ident);

@@ -17,6 +17,7 @@ enum raon_value_type {
    raon_value_type_string,
    raon_value_type_int,
    raon_value_type_bool,
+   raon_value_type_float,
    raon_value_type_block,
    raon_value_type_array,
    raon_value_type_error,
@@ -28,6 +29,7 @@ struct raon_value {
       struct raon_str_slice str_val;
       intptr_t int_val;
       bool bool_val;
+      double float_val;
       struct vector_of_raon_entry *block_val;
       struct vector_of_raon_value *array_val;
    };
