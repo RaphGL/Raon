@@ -1,5 +1,4 @@
-#include "lexer.h"
-#include "str_slice.h"
+#include "raon.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -14,8 +13,8 @@
    #define raon_free free
 #endif
 
-struct raon_lexer raon_lexer_init(char *str) {
-   return (struct raon_lexer) { .str = str, .str_len = strlen(str), .line = 1 };
+struct raon_lexer raon_lexer_init(char *str, size_t len) {
+   return (struct raon_lexer) { .str = str, .str_len = len, .line = 1 };
 }
 
 static char raon_lexer_peek_char(struct raon_lexer *self) {
@@ -87,6 +86,10 @@ struct raon_token raon_lexer_lex_string(struct raon_lexer *self) {
       return error_val;
    }
    return token;
+}
+
+static struct raon_token raon_lexer_lex_scientific_num(struct raon_lexer *self) {
+   // TODO
 }
 
 struct raon_token raon_lexer_lex_num(struct raon_lexer *self) {

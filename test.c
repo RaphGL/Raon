@@ -1,5 +1,4 @@
-#include "src/lexer.h"
-#include "src/parser.h"
+#include "src/raon.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -13,7 +12,7 @@ struct unit_test {
 
 #define run_lexer_test(lexer_func)                                                                 \
    for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {                               \
-      struct raon_lexer lex = raon_lexer_init(inputs[i].input);                                    \
+      struct raon_lexer lex = raon_lexer_init(inputs[i].input, strlen(inputs[i].input));                                    \
       struct raon_token token = lexer_func(&lex);                                                  \
       printf("Testing %s: ", inputs[i].type);                                                      \
       assert((token.type != raon_token_type_error) == inputs[i].success);                          \
@@ -21,19 +20,13 @@ struct unit_test {
    }
 
 void test_int_values() {
-   struct unit_test inputs[] = {
-      { "binary int", "0b110", true },
-      { "hexadecimal int", "0xdeadbeef", true },
-      { "octal int", "0o72", true },
-      { "decimal int", "999", true },
-      { "int separator", "10_000", true },
+   struct unit_test inputs[] = { { "binary int", "0b110", true },
+      { "hexadecimal int", "0xdeadbeef", true }, { "octal int", "0o72", true },
+      { "decimal int", "999", true }, { "int separator", "10_000", true },
       { "int trailing separator", "10_000_", false },
-      { "int starting separator", "_10_000", false },
-      { "positive float", "0.5", true },
-      { "negative float", "-0.5", true },
-      { "double float", "0.5.1", false },
-      { "negative double float", "-0.5.1", false },
-   };
+      { "int starting separator", "_10_000", false }, { "positive float", "0.5", true },
+      { "negative float", "-0.5", true }, { "double float", "0.5.1", false },
+      { "negative double float", "-0.5.1", false }, { "float separator", "5_430.1_2", true } };
 
    run_lexer_test(raon_lexer_lex_num);
 }
@@ -70,6 +63,7 @@ int main(void) {
       perror("Failed to preallocate buffer");
       goto cleanup;
    }
+   memset(buf, 0, BUF_SIZE);
 
    FILE *fd = fopen("./example.raon", "r");
    if (!fd) {
@@ -77,14 +71,14 @@ int main(void) {
       goto cleanup;
    }
 
-   fread(buf, 1, BUF_SIZE, fd);
+   fread(buf, 1, BUF_SIZE - 1, fd);
    if (ferror(fd)) {
       perror("Failed to read file.");
       fclose(fd);
       goto cleanup;
    }
 
-   struct vector_of_raon_entry *entries = raon_parse(buf);
+   struct vector_of_raon_entry *entries = raon_parse(buf, strlen(buf));
    printf("\n\n");
    printf("Ret: %p\n\n", (void *)entries);
 

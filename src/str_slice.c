@@ -1,4 +1,4 @@
-#include "str_slice.h"
+#include "raon.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,7 +25,7 @@ char *raon_str_from_slice(struct raon_str_slice slice) {
    return str;
 }
 
-char *raon_copy_slice_to_str(char *dest, struct raon_str_slice src, size_t size) {
+char *raon_copy_slice_to_str(char *dest, size_t size, struct raon_str_slice src) {
    size_t cstr_len = src.len + 1;
    if (size < cstr_len) {
       return NULL;

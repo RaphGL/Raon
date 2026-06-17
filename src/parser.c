@@ -1,6 +1,4 @@
-#include "parser.h"
-#include "lexer.h"
-#include "str_slice.h"
+#include "raon.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -262,10 +260,8 @@ struct vector_of_raon_entry *raon_parse_block(
    return entries;
 }
 
-// TODO: make a function to free all of the AST stuff
-// TODO: return NULL when parsing fails
-struct vector_of_raon_entry *raon_parse(char *str) {
-   struct raon_lexer lexer = raon_lexer_init(str);
+struct vector_of_raon_entry *raon_parse(char *str, size_t len) {
+   struct raon_lexer lexer = raon_lexer_init(str, len);
 
    struct vector_of_raon_entry *entries = vec_new_raon_entry();
    for (;;) {
@@ -293,7 +289,7 @@ struct vector_of_raon_entry *raon_parse(char *str) {
    }
 
    if (!raon_entry_types_match(entries)) {
-      // TODO: free entries AST
+      raon_free_entries(entries);
       return NULL;
    }
 
