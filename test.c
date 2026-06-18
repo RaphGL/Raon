@@ -12,7 +12,7 @@ struct unit_test {
 
 #define run_lexer_test(lexer_func)                                                                 \
    for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {                               \
-      struct raon_lexer lex = raon_lexer_init(inputs[i].input, strlen(inputs[i].input));                                    \
+      struct raon_lexer lex = raon_lexer_init(inputs[i].input, strlen(inputs[i].input));           \
       struct raon_token token = lexer_func(&lex);                                                  \
       printf("Testing %s: ", inputs[i].type);                                                      \
       assert((token.type != raon_token_type_error) == inputs[i].success);                          \

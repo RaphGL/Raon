@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import os
 import shutil
+from pathlib import Path
 import subprocess
 import sys
 
@@ -9,7 +11,6 @@ files = [
     "./src/parser.c",
     "./src/lexer.c",
     "./src/str_slice.c",
-    "./test.c"
 ]
 
 libs = ["m"]
@@ -21,12 +22,21 @@ sanitizers = [
 ]
 
 
-def find_compiler() -> str:
+def find_c_compiler() -> str | None:
     cc = shutil.which("cc")
-    if cc is None:
-        print("Failed to find C compiler")
-        sys.exit(1)
     return cc
+
+
+def find_cpp_compiler() -> str | None:
+    compilers = [
+        shutil.which("g++"),
+        shutil.which("clang++"),
+    ]
+
+    valid_compilers = list(filter(lambda comp: comp is not None, compilers))
+    if valid_compilers and len(valid_compilers) > 0:
+        return valid_compilers[0]
+    return None
 
 
 def get_flags() -> list[str]:
@@ -47,14 +57,46 @@ def get_flags() -> list[str]:
     return flags
 
 
-def main():
-    cc = find_compiler()
+def build_library(cc: str, flags: list[str]) -> str | None:
+    libname = "libraon.a"
+
+    res = subprocess.run([cc, *flags, '-c', *files])
+    if res.returncode != 0:
+        return None
+
+    objs = list(map(lambda f: str(Path(f).with_suffix(".o").name), files))
+    res = subprocess.run(["ar", "rcs", libname, *objs])
+    if res.returncode != 0:
+        return None
+
+    return libname
+
+
+def main() -> int:
+    cc = find_c_compiler()
+    if cc is None:
+        print("Failed to find C compiler")
+        return 1
+
+
     flags = get_flags()
 
-    build_cmd = ' '.join([cc] + flags + files)
-    print(f"BUILDING WITH: {build_cmd}\n\n")
-    subprocess.run([cc, *flags, *files])
+    libname = build_library(cc, flags)
+    if libname is None:
+        print("Error: Failed to compile library.")
+        return 1
+
+    build_cmd = [cc, *flags, "test.c", libname, "-o", "raon_test"]
+    print(f"BUILDING WITH: {' '.join(build_cmd)}\n\n")
+    subprocess.run(build_cmd)
+
+    cpp = find_cpp_compiler()
+    if cpp is not None:
+        build_cpp_cmd = [cpp, "test.cpp", libname, "-o", "raon_test_cpp"]
+        subprocess.run(build_cpp_cmd)
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

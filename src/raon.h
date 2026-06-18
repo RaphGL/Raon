@@ -1,6 +1,10 @@
 #ifndef RAON_H
 #define RAON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -174,7 +178,7 @@ void raon_free_values(struct vector_of_raon_value *values);
 void raon_free_entries(struct vector_of_raon_entry *entries);
 
 /*
-   Passed to print functions so that they can figure out how to properly do indentation 
+   Passed to print functions so that they can figure out how to properly do indentation
    and which whitespace indentation is preferred.
 */
 struct raon_print_ctx {
@@ -187,5 +191,10 @@ void raon_print_entry(struct raon_print_ctx ctx, struct raon_entry entry);
 void raon_print_value(struct raon_print_ctx ctx, struct raon_value value);
 void raon_print_array(struct raon_print_ctx ctx, struct vector_of_raon_value *array);
 void raon_print_entries(struct raon_print_ctx ctx, struct vector_of_raon_entry *entries);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif

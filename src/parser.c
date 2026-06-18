@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #define VEC_IMPLEMENTATION
 #define VEC_ITEM_TYPE struct raon_value

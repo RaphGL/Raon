@@ -5,14 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef raon_malloc
-   #define raon_malloc malloc
-#endif
-
-#ifndef raon_free
-   #define raon_free free
-#endif
-
 struct raon_lexer raon_lexer_init(char *str, size_t len) {
    return (struct raon_lexer) { .str = str, .str_len = len, .line = 1 };
 }
@@ -172,7 +164,7 @@ struct raon_token raon_lexer_lex_num(struct raon_lexer *self) {
    token.end_col = self->col;
    token.end_line = self->line;
 
-   char *num_str = raon_malloc(int_len + 1);
+   char *num_str = malloc(int_len + 1);
    if (!num_str) {
       return error_val;
    }
@@ -213,7 +205,7 @@ struct raon_token raon_lexer_lex_num(struct raon_lexer *self) {
    if (errno == EINVAL || errno == ERANGE) {
       return error_val;
    }
-   raon_free(num_str);
+   free(num_str);
    return token;
 }
 
