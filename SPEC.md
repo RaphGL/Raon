@@ -1,23 +1,23 @@
 # RAON Specification
 
 ```grammar
-entry      = key ("." key)* "=" value
 entry_list = (entry separator)+
-block      = "{" entry_list "}" 
-array      = "[" (value separator)* "]"
-
+entry      = key ("." key)* "=" value
 key    = ident | num | string
 value  = (string | bool | num | block | array)
-ident  = (A-z | 0-9 | "-" | "_")+
+
+ident  = (A-z | "_") (A-z | "_" | 0-9 | "-")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
+block      = "{" entry_list "}" 
+array      = "[" (value separator)* "]"
 
 num         = hex_num | octal_num | decimal_num | binary_num | float_num
 hex_num     = "0x" (A-f | "_")+
 octal_num   = "0o" (0-7 | "_")+
 decimal_num = "-"? (0-9 | "_")+
 binary_num  = "0b" (0-1 | "_")+
-float_num   = "-" (0-9 | "_")+ "." (0-9 | "_")+
+float_num   = "-"? (0-9 | "_")+ "." (0-9 | "_")+
 
 # end_char here means the ending character for arrays or blocks
 # it only is valid when closing an array or a block
