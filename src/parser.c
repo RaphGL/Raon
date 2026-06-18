@@ -32,7 +32,7 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
       break;
 
    case raon_token_type_int:
-      entry.key_type = raon_key_type_int;
+      entry.key_type = raon_key_type_num;
       entry.int_key = first_token.int_val;
       break;
 
@@ -379,7 +379,7 @@ void raon_print_entry(struct raon_print_ctx ctx, struct raon_entry entry) {
       }
    } break;
 
-   case raon_key_type_int:
+   case raon_key_type_num:
       printf("%lu = ", entry.int_key);
       break;
 

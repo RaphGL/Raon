@@ -53,6 +53,24 @@ void test_ident_values(void) {
    run_lexer_test(raon_lexer_lex_ident);
 }
 
+void test_entries(void) {
+   struct unit_test inputs[] = {
+      // TODO
+   };
+}
+
+void test_array(void) {
+   struct unit_test inputs[] = {
+      // TODO
+   };
+}
+
+void test_blocks(void) {
+   struct unit_test inputs[] = {
+      // TODO
+   };
+}
+
 int main(void) {
    test_num_values();
    test_string_values();

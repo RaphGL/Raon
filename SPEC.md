@@ -3,14 +3,14 @@
 ```grammar
 entry_list = (entry separator)+
 entry      = key ("." key)* "=" value
-key    = ident | num | string
-value  = (string | bool | num | block | array)
+key        = ident | string | (decimal_num | hex_num | octal_num | binary_num)
+value      = (string | bool | num | block | array)
 
 ident  = (A-z | "_") (A-z | "_" | 0-9 | "-")*
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
-block      = "{" entry_list "}" 
-array      = "[" (value separator)* "]"
+block  = "{" entry_list "}" 
+array  = "[" (value separator)* "]"
 
 num         = hex_num | octal_num | decimal_num | binary_num | float_num
 hex_num     = "0x" (A-f | "_")+
@@ -40,16 +40,16 @@ whatever is defined in the string grammar point or in the bool grammar point.
 
 A raon file should always start with an entry list. A top-level block or array literal are invalid.
 
-**Rationale**: Raon should easily map to hashtable or when possible directly to a struct (which might be unmarshaled into through reflection in some languages).
+**Rationale**: Raon should easily map to a hash-table or when possible directly to a struct (which might be unmarshaled into through reflection in some languages).
 
 ### Primitive types
 There's only 5 types in Raon:
 - int: represents signed integers, it should ideally be the highest indexable size in the system (`intptr_t` in C or `isize` in many other languages)
 - float: should ideally represent a float64 number (usually `double` or `f64` in many languages)
 - bool: represents a boolean type
-- string: any valid language unicode character
+- string: any valid visible unicode character
 - array: an array of items of one of the types
-- block: an associative array whose values are of the other types
+- block: an associative array of one of the types
 
 ### Comments
 They start with a `#` and stop once a newline is found.
@@ -81,6 +81,7 @@ Accepting any type in arrays would not map well to statically typed languages.
 
 ### Blocks
 Just like with arrays, the first key's type encountered in a block determines the type for all keys in the block.
+Keys can be an identifier, a string or a number (except floats).
 Values can be of any type.
 
 Fields and strings are both considered to be string keys, therefore they can be used interchangeably as keys.

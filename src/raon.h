@@ -143,7 +143,7 @@ struct raon_value {
 
 enum raon_key_type {
    raon_key_type_string,
-   raon_key_type_int,
+   raon_key_type_num,
    raon_key_type_error,
 };
 
