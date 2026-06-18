@@ -19,7 +19,7 @@ struct unit_test {
       printf("OK\n");                                                                              \
    }
 
-void test_int_values() {
+void test_num_values() {
    struct unit_test inputs[] = { { "binary int", "0b110", true },
       { "hexadecimal int", "0xdeadbeef", true }, { "octal int", "0o72", true },
       { "decimal int", "999", true }, { "int separator", "10_000", true },
@@ -54,7 +54,7 @@ void test_ident_values(void) {
 }
 
 int main(void) {
-   test_int_values();
+   test_num_values();
    test_string_values();
    test_ident_values();
 

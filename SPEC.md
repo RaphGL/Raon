@@ -1,23 +1,23 @@
 # RAON Specification
 
 ```grammar
-entry  = key ("." key)* "=" value
-entry_list = (entry separator)*
-block  = "{" entry_list "}" 
-array  = "[" (value separator)* "]"
+entry      = key ("." key)* "=" value
+entry_list = (entry separator)+
+block      = "{" entry_list "}" 
+array      = "[" (value separator)* "]"
 
-key = ident | num | string
+key    = ident | num | string
 value  = (string | bool | num | block | array)
-ident  = (A-z | 0-9 | "-" | "_")*
+ident  = (A-z | 0-9 | "-" | "_")+
 string = "\"" [\W\d]* "\"" # a string can be any valid unicode
 bool   = "true" | "false"
 
-num    = hex_num | octal_num | decimal_num | binary_num
-hex_num = "0x" (A-f)*
-octal_num = "0o" (0-7)*
-decimal_num = "-"? (0-9)*
-binary_num = "0b" (0-1)*
-float_num = "-" (0-9)* "." (0-9)*
+num         = hex_num | octal_num | decimal_num | binary_num | float_num
+hex_num     = "0x" (A-f | "_")+
+octal_num   = "0o" (0-7 | "_")+
+decimal_num = "-"? (0-9 | "_")+
+binary_num  = "0b" (0-1 | "_")+
+float_num   = "-" (0-9 | "_")+ "." (0-9 | "_")+
 
 # end_char here means the ending character for arrays or blocks
 # it only is valid when closing an array or a block
@@ -29,6 +29,7 @@ Grammar syntax:
 - `=`: starts a grammar point declaration.
 - `*`: the previous token is repeated zero or more times. 
 - `?`: the previous token is repeated 0 or 1 time.
+- `+`: the previous token is repeated 1 or more times.
 - `""`: anything in quotes is a literal.
 - `()`: used for grouping, for example `(num "+" num)*` means that this will happen 0 or more times.
 - `|`: used to denote that either the left or the right side will happen, for example `string | bool` means that this will either be
@@ -62,10 +63,11 @@ Single quotes (`'`) cannot be used to represent strings.
 
 **Rationale:** Having more than one syntax for strings is a waste of time.
 
-### Integers
+### Numbers
 Integers are signed integer numbers that are ideally the same size as the highest addressable size in the system, usually `intptr_t` or `isize` in various languages.
+Floating point numbers are numbers that are preferrably a 64-bit float, usually `double` or `f64` in various languages.
 
-Integer literals support number separators using `_`. So `100000` and `100_000` are both valid and mean the same thing.
+Number literals support number separators using `_`. So `100000` and `100_000` are both valid and mean the same thing.
 They can also be represented in binary, octal and hexadecimal form through `0b`, `0o` and `0x` respectively.
 
 ### Arrays
