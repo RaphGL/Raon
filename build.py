@@ -5,6 +5,19 @@ from pathlib import Path
 import subprocess
 import sys
 
+HELP_MSG = f"""
+HELP:  {sys.argv[0]} <cmd> [flags]
+
+CMD:
+  release      - compile library with release optimizations
+  debug        - compile library with debug symbols
+  test         - run tests
+  test release - run tests with release mode
+
+FLAGS:  
+  -sanitize    - add sanitizers to the build
+"""
+
 cflags = ["-Wall", "-Wextra", "-pedantic", "-std=c11"]
 
 files = [
@@ -71,8 +84,31 @@ def build_library(cc: str, flags: list[str]) -> str | None:
 
     return libname
 
+def run_tests(cc: str, flags: list[str], lib_artifact: str):
+    if "test" not in sys.argv:
+        return
+    
+    build_cmd = [cc, *flags, "test.c", lib_artifact, "-o", "raon_test"]
+    print(f"BUILDING WITH: {' '.join(build_cmd)}\n\n")
+    res_c = subprocess.run(build_cmd)
+
+    cpp = find_cpp_compiler()
+    res_cpp = None
+    if cpp is not None:
+        build_cpp_cmd = [cpp, "test.cpp", lib_artifact, "-o", "raon_test_cpp"]
+        res_cpp = subprocess.run(build_cpp_cmd)
+
+    if res_c.returncode == 0:
+        subprocess.run("./raon_test")
+    if res_cpp and res_cpp.returncode == 0:
+        subprocess.run("./raon_test_cpp")
+
 
 def main() -> int:
+    if len(sys.argv) == 1:
+        print(HELP_MSG)
+        return 0
+
     cc = find_c_compiler()
     if cc is None:
         print("Failed to find C compiler")
@@ -81,19 +117,12 @@ def main() -> int:
 
     flags = get_flags()
 
-    libname = build_library(cc, flags)
-    if libname is None:
+    lib_artifact = build_library(cc, flags)
+    if lib_artifact is None:
         print("Error: Failed to compile library.")
         return 1
 
-    build_cmd = [cc, *flags, "test.c", libname, "-o", "raon_test"]
-    print(f"BUILDING WITH: {' '.join(build_cmd)}\n\n")
-    subprocess.run(build_cmd)
-
-    cpp = find_cpp_compiler()
-    if cpp is not None:
-        build_cpp_cmd = [cpp, "test.cpp", libname, "-o", "raon_test_cpp"]
-        subprocess.run(build_cpp_cmd)
+    run_tests(cc, flags, lib_artifact)
 
     return 0
 

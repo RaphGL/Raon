@@ -1,6 +1,7 @@
 #include "src/raon.h"
 #include <assert.h>
 #include <stdio.h>
+#include "vendor/ht.h"
 
 #define BUF_SIZE 20 * 1024 * 1024
 
@@ -54,21 +55,18 @@ void test_ident_values(void) {
 }
 
 void test_entries(void) {
-   struct unit_test inputs[] = {
-      // TODO
-   };
+   // TODO
+   struct unit_test inputs[] = {0};
 }
 
 void test_array(void) {
-   struct unit_test inputs[] = {
-      // TODO
-   };
+   // TODO
+   struct unit_test inputs[] = {0};
 }
 
 void test_blocks(void) {
-   struct unit_test inputs[] = {
-      // TODO
-   };
+   // TODO
+   struct unit_test inputs[] = {0};
 }
 
 int main(void) {
