@@ -156,12 +156,10 @@ struct raon_entry {
    struct raon_value value;
 };
 
-struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token first_token);
-struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token first_token);
-struct vector_of_raon_value *raon_parse_array(
-    struct raon_lexer *lexer, struct raon_token first_token);
-struct vector_of_raon_entry *raon_parse_block(
-    struct raon_lexer *lexer, struct raon_token first_token);
+struct raon_entry raon_parse_entry(struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token);
+struct raon_value raon_parse_value(struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token);
+struct vector_of_raon_value *raon_parse_array(struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token);
+struct vector_of_raon_entry *raon_parse_block(struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token);
 
 /*
    Parses text into a Raon AST.
@@ -172,7 +170,7 @@ struct vector_of_raon_entry *raon_parse_block(
 
    Returns: NULL if parsing failed
 */
-struct vector_of_raon_entry *raon_parse(char *str, size_t len);
+struct vector_of_raon_entry *raon_parse(struct vec_allocator allocator, char *str, size_t len);
 
 void raon_free_values(struct vector_of_raon_value *values);
 void raon_free_entries(struct vector_of_raon_entry *entries);

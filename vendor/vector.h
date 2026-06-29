@@ -19,32 +19,48 @@
 
 #ifndef VEC_IMPLEMENTATION
 
+typedef void *(*VecAllocFunc)(size_t);
+typedef void (*VecFreeFunc)(void *);
+
+   #ifndef VEC_ALLOCATOR_STRUCT_STUB_DECLARED
+      #define VEC_ALLOCATOR_STRUCT_STUB_DECLARED
+typedef struct vec_allocator {
+   VecAllocFunc alloc;
+   VecFreeFunc free;
+} VecAllocator;
+   #endif
+
+   #define VEC_DEFAULT_ALLOCATOR ((VecAllocator) { .alloc = malloc, .free = free })
+
 typedef struct G(vector_of) {
+   VecAllocator allocator;
    size_t capacity;
    size_t len;
    VEC_ITEM_TYPE *vec;
 } G(Vector_of);
 
-G(Vector_of) * G(vec_new)(void);
-bool G(vec_fit)(G(Vector_of) *vec);
-bool G(vec_push)(G(Vector_of) *vec, VEC_ITEM_TYPE item);
+G(Vector_of) * G(vec_new)(VecAllocator allocator);
+bool G(vec_fit)(G(Vector_of) * vec);
+bool G(vec_push)(G(Vector_of) * vec, VEC_ITEM_TYPE item);
 size_t G(vec_len)(const G(Vector_of) * vec);
 size_t G(vec_capacity)(const G(Vector_of) * vec);
-bool G(vec_pop)(G(Vector_of) *vec, VEC_ITEM_TYPE *dest);
-void G(vec_free)(G(Vector_of) *vec);
+bool G(vec_pop)(G(Vector_of) * vec, VEC_ITEM_TYPE *dest);
+void G(vec_free)(G(Vector_of) * vec);
 bool G(vec_get)(const G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE *dest);
 void G(vec_printf)(const char *fmt, const G(Vector_of) * vec);
 bool G(vec_insert)(G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE item);
-bool G(vec_remove)(G(Vector_of) *vec, const size_t index, VEC_ITEM_TYPE *dest);
+bool G(vec_remove)(G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE *dest);
 bool G(vec_is_empty)(const G(Vector_of) * vec);
-bool G(vec_append)(G(Vector_of) *dest, const G(Vector_of) * src);
-G(Vector_of) * G(vec_from)(VEC_ITEM_TYPE *const arr, size_t length, size_t item_size);
+bool G(vec_append)(G(Vector_of) * dest, const G(Vector_of) * src);
+G(Vector_of)
+    * G(vec_from)(
+        VecAllocator allocator, VEC_ITEM_TYPE *const arr, size_t length, size_t item_size);
 
 #else
 
 // Initializes a new vector with items of sizeof(T)
-G(Vector_of) * G(vec_new)(void) {
-   G(Vector_of) *vector = malloc(sizeof(*vector));
+G(Vector_of) * G(vec_new)(VecAllocator allocator) {
+   G(Vector_of) *vector = allocator.alloc(sizeof(*vector));
    if (!vector) {
       return NULL;
    }
@@ -53,21 +69,24 @@ G(Vector_of) * G(vec_new)(void) {
       .capacity = 0,
       .len = 0,
       .vec = NULL,
+      .allocator = allocator,
    };
 
    return vector;
 }
 
 // Resizes vector to fit length
-bool G(vec_fit)(G(Vector_of) *vec) {
+bool G(vec_fit)(G(Vector_of) * vec) {
    const size_t power = ceilf(log2f(vec->len + 1));
    const size_t new_capacity = sizeof(vec->vec[0]) * powf(2, power);
 
    if (new_capacity < vec->capacity || new_capacity > vec->capacity) {
-      void *tmp = realloc(vec->vec, new_capacity);
+      void *tmp = vec->allocator.alloc(new_capacity);
       if (!tmp) {
          return false;
       }
+      memcpy(tmp, vec->vec, vec->len * sizeof(vec->vec[0]));
+      vec->allocator.free(vec->vec);
       vec->vec = tmp;
       vec->capacity = new_capacity;
    }
@@ -75,9 +94,9 @@ bool G(vec_fit)(G(Vector_of) *vec) {
 }
 
 // Pushes a value to vector
-bool G(vec_push)(G(Vector_of) *vec, VEC_ITEM_TYPE item) {
+bool G(vec_push)(G(Vector_of) * vec, VEC_ITEM_TYPE item) {
    if (vec->len == 0 && vec->capacity == 0) {
-      vec->vec = malloc(sizeof(vec->vec[0]));
+      vec->vec = vec->allocator.alloc(sizeof(vec->vec[0]));
       if (!vec->vec) {
          return false;
       }
@@ -101,7 +120,7 @@ size_t G(vec_len)(const G(Vector_of) * vec) { return vec->len; }
 size_t G(vec_capacity)(const G(Vector_of) * vec) { return vec->capacity; }
 
 // Removes an item from the end of the vector and assigns it to dest
-bool G(vec_pop)(G(Vector_of) *vec, VEC_ITEM_TYPE *dest) {
+bool G(vec_pop)(G(Vector_of) * vec, VEC_ITEM_TYPE *dest) {
    if (!vec->vec || vec->len <= 0 || vec->capacity <= 0) {
       return false;
    }
@@ -115,10 +134,10 @@ bool G(vec_pop)(G(Vector_of) *vec, VEC_ITEM_TYPE *dest) {
 }
 
 // Clears out all the memory used by the vector
-void G(vec_free)(G(Vector_of) *vec) {
-   free(vec->vec);
+void G(vec_free)(G(Vector_of) * vec) {
+   vec->allocator.free(vec->vec);
    vec->vec = NULL;
-   free(vec);
+   vec->allocator.free(vec);
 }
 
 // Returns item at index
@@ -159,7 +178,7 @@ bool G(vec_insert)(G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE item) {
 }
 
 // Removes an item at index
-bool G(vec_remove)(G(Vector_of) *vec, const size_t index, VEC_ITEM_TYPE *dest) {
+bool G(vec_remove)(G(Vector_of) * vec, const size_t index, VEC_ITEM_TYPE *dest) {
    size_t len = vec->len - 1;
    if (index > len) {
       return false;
@@ -187,7 +206,7 @@ bool G(vec_is_empty)(const G(Vector_of) * vec) {
 }
 
 // Appends vector from src to dest
-bool G(vec_append)(G(Vector_of) *dest, const G(Vector_of) * src) {
+bool G(vec_append)(G(Vector_of) * dest, const G(Vector_of) * src) {
    for (size_t i = 0; i < src->len; i++) {
       if (!G(vec_push)(dest, src->vec[i])) {
          return false;
@@ -197,8 +216,10 @@ bool G(vec_append)(G(Vector_of) *dest, const G(Vector_of) * src) {
    return true;
 }
 
-G(Vector_of) * G(vec_from)(VEC_ITEM_TYPE *const arr, size_t length, size_t item_size) {
-   G(Vector_of) *vec = G(vec_new)();
+G(Vector_of)
+    * G(vec_from)(
+        VecAllocator allocator, VEC_ITEM_TYPE *const arr, size_t length, size_t item_size) {
+   G(Vector_of) *vec = G(vec_new)(allocator);
    for (size_t i = 0; i < length; i++) {
       if (!G(vec_push)(vec, arr[i])) {
          G(vec_free)(vec);

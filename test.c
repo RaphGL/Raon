@@ -1,6 +1,9 @@
 #include "src/raon.h"
+#include "vendor/ht.h"
 #include <assert.h>
 #include <stdio.h>
+
+#define HT_IMPLEMENTATION
 #include "vendor/ht.h"
 
 #define BUF_SIZE 20 * 1024 * 1024
@@ -94,7 +97,7 @@ int main(void) {
       goto cleanup;
    }
 
-   struct vector_of_raon_entry *entries = raon_parse(buf, strlen(buf));
+   struct vector_of_raon_entry *entries = raon_parse(VEC_DEFAULT_ALLOCATOR, buf, strlen(buf));
    printf("\n\n");
    printf("Ret: %p\n\n", (void *)entries);
 

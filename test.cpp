@@ -15,7 +15,7 @@ int main(void) {
 
   std::string contents = strbuf.str();
 
-  auto ast = raon_parse(contents.data(), contents.size());
+  auto ast = raon_parse(VEC_DEFAULT_ALLOCATOR, contents.data(), contents.size());
   if (!ast) {
     std::cerr << "Failed to parse raon file\n";
     return 1;

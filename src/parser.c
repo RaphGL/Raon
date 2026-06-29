@@ -20,7 +20,8 @@ bool raon_is_valid_separator(
        || (optional_separator != NULL && first_token.type == *optional_separator);
 }
 
-struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token first_token) {
+struct raon_entry raon_parse_entry(
+    struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token) {
    const struct raon_entry error_val = { .key_type = raon_key_type_error };
 
    struct raon_entry entry = { 0 };
@@ -46,11 +47,11 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
    if (token.type == raon_token_type_dot) {
       token = raon_lexer_eat(lexer);
       entry.value.type = raon_value_type_block;
-      entry.value.block_val = vec_new_raon_entry();
+      entry.value.block_val = vec_new_raon_entry(allocator);
       if (!entry.value.block_val) {
          return error_val;
       }
-      vec_push_raon_entry(entry.value.block_val, raon_parse_entry(lexer, token));
+      vec_push_raon_entry(entry.value.block_val, raon_parse_entry(allocator, lexer, token));
       return entry;
    }
    if (token.type != raon_token_type_equal) {
@@ -58,7 +59,7 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
    }
 
    token = raon_lexer_eat(lexer);
-   struct raon_value val = raon_parse_value(lexer, token);
+   struct raon_value val = raon_parse_value(allocator, lexer, token);
    if (val.type == raon_value_type_error) {
       return error_val;
    }
@@ -67,7 +68,7 @@ struct raon_entry raon_parse_entry(struct raon_lexer *lexer, struct raon_token f
    return entry;
 }
 
-struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token first_token) {
+struct raon_value raon_parse_value(struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token) {
    const struct raon_value error_val = { .type = raon_value_type_error };
 
    struct raon_value val = { 0 };
@@ -95,12 +96,12 @@ struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token f
 
    case raon_token_type_block_open:
       val.type = raon_value_type_block;
-      val.block_val = raon_parse_block(lexer, first_token);
+      val.block_val = raon_parse_block(allocator, lexer, first_token);
       break;
 
    case raon_token_type_array_open:
       val.type = raon_value_type_array;
-      val.array_val = raon_parse_array(lexer, first_token);
+      val.array_val = raon_parse_array(allocator, lexer, first_token);
       break;
 
    default:
@@ -111,12 +112,12 @@ struct raon_value raon_parse_value(struct raon_lexer *lexer, struct raon_token f
 }
 
 struct vector_of_raon_value *raon_parse_array(
-    struct raon_lexer *lexer, struct raon_token first_token) {
+    struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token) {
    if (first_token.type != raon_token_type_array_open) {
       return NULL;
    }
 
-   struct vector_of_raon_value *values = vec_new_raon_value();
+   struct vector_of_raon_value *values = vec_new_raon_value(allocator);
 
    for (;;) {
       struct raon_token token = raon_lexer_eat(lexer);
@@ -124,7 +125,7 @@ struct vector_of_raon_value *raon_parse_array(
          break;
       }
 
-      struct raon_value val = raon_parse_value(lexer, token);
+      struct raon_value val = raon_parse_value(allocator, lexer, token);
       if (val.type == raon_value_type_error) {
          vec_free_raon_value(values);
          return NULL;
@@ -216,12 +217,12 @@ static bool raon_entry_types_match(struct vector_of_raon_entry *entries) {
 }
 
 struct vector_of_raon_entry *raon_parse_block(
-    struct raon_lexer *lexer, struct raon_token first_token) {
+    struct vec_allocator allocator, struct raon_lexer *lexer, struct raon_token first_token) {
    if (first_token.type != raon_token_type_block_open) {
       return NULL;
    }
 
-   struct vector_of_raon_entry *entries = vec_new_raon_entry();
+   struct vector_of_raon_entry *entries = vec_new_raon_entry(allocator);
 
    for (;;) {
       struct raon_token token = raon_lexer_eat(lexer);
@@ -236,7 +237,7 @@ struct vector_of_raon_entry *raon_parse_block(
          continue;
       }
 
-      struct raon_entry entry = raon_parse_entry(lexer, token);
+      struct raon_entry entry = raon_parse_entry(allocator, lexer, token);
       if (entry.key_type == raon_key_type_error) {
          vec_free_raon_entry(entries);
          return NULL;
@@ -261,10 +262,10 @@ struct vector_of_raon_entry *raon_parse_block(
    return entries;
 }
 
-struct vector_of_raon_entry *raon_parse(char *str, size_t len) {
+struct vector_of_raon_entry *raon_parse(struct vec_allocator allocator, char *str, size_t len) {
    struct raon_lexer lexer = raon_lexer_init(str, len);
 
-   struct vector_of_raon_entry *entries = vec_new_raon_entry();
+   struct vector_of_raon_entry *entries = vec_new_raon_entry(allocator);
    for (;;) {
       struct raon_token token = raon_lexer_eat(&lexer);
       if (token.type == raon_token_type_eof) {
@@ -277,7 +278,7 @@ struct vector_of_raon_entry *raon_parse(char *str, size_t len) {
          return NULL;
       }
 
-      struct raon_entry entry = raon_parse_entry(&lexer, token);
+      struct raon_entry entry = raon_parse_entry(allocator, &lexer, token);
       if (entry.value.type != raon_value_type_error) {
          vec_push_raon_entry(entries, entry);
       }

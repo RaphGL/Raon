@@ -1,3 +1,7 @@
+// CHANGES MADE:
+// - This is mostly the default library as made by tsoding but the allocation was changed from using 
+// macro definitions to a allocator passing API.
+// 
 // ht.h - v1.1.0 - Public Domain - Hash Table in C
 //
 // # STB-style Single Header Library
@@ -58,6 +62,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef struct {
+    void *(*alloc)(size_t);
+    void (*free)(void *);
+} Ht_Allocator;
+
+#include <stdlib.h>
+#define HT_DEFAULT_ALLOCATOR ((Ht_Allocator){ .alloc = malloc, .free = free })
+
 // The Hash Table.
 //
 // You can define it like this:
@@ -79,6 +91,7 @@
 // ```
 #define Ht(Key, Value)                                           \
     struct {                                                     \
+        Ht_Allocator allocator;                                  \
         /* .count - amount of unique items in the Hash Table. */ \
         size_t      count;                                       \
         /* .hasheq - key Hashing and Equality function.          \
@@ -411,7 +424,7 @@ HT_PUBDEF uintptr_t ht_sv_hasheq(Ht_Op op, void const *a, void const *b, size_t 
 // void ht_free(Ht(Key, Value) *ht)
 //
 // Deallocates all the memory associated with the hash table and completely resets its state.
-// Operation should be O(1) but it calls to HT_FREE() to free the allocated buffers. So include
+// Operation should be O(1) but it calls to ht->allocator.free() to free the allocated buffers. So include
 // that into your estimates.
 #define ht_free(ht) ht__free((Ht__Abstract*)(ht))
 
@@ -440,14 +453,6 @@ HT_PUBDEF uintptr_t ht_id_hash(void const *data, size_t size);
 #if !defined(HT_ASSERT)
     #include <assert.h>
     #define HT_ASSERT assert
-#endif
-
-#if !defined(HT_FREE) && !defined(HT_MALLOC)
-    #include <stdlib.h>
-    #define HT_FREE   free
-    #define HT_MALLOC malloc
-#elif !defined(HT_FREE) || !defined(HT_MALLOC)
-    #error "Both HT_FREE and HT_MALLOC must be defined together"
 #endif
 
 // PRIVATE NAMES! DO NOT USE DIRECTLY!
@@ -495,6 +500,7 @@ typedef struct {
 #define ht__slot_size(l)       (l).slot_size
 
 typedef struct {
+    Ht_Allocator allocator;
     size_t      count;
     Ht_Hasheq   hasheq;
     void       *impl_slots;
@@ -648,7 +654,7 @@ static void ht__reset(Ht__Abstract *ht, Ht__Layout l)
 
 static void ht__free(Ht__Abstract *ht)
 {
-    HT_FREE(ht->impl_slots);
+    ht->allocator.free(ht->impl_slots);
     ht->impl_slots        = NULL;
     ht->impl_filled_slots = 0;
     ht->impl_capacity     = 0;
@@ -825,7 +831,7 @@ static void ht__expand(Ht__Abstract *ht, Ht__Layout l)
         HT_ASSERT(ht->impl_capacity);
         ht->impl_filled_slots = 0;
         ht->count             = 0;
-        ht->impl_slots        = HT_MALLOC(ht->impl_capacity*ht__slot_size(l));
+        ht->impl_slots        = ht->allocator.alloc(ht->impl_capacity*ht__slot_size(l));
 
         {
             uint8_t *slots_start = (uint8_t*)ht->impl_slots;
@@ -846,7 +852,7 @@ static void ht__expand(Ht__Abstract *ht, Ht__Layout l)
             }
         }
 
-        HT_FREE(old_impl_slots);
+        ht->allocator.free(old_impl_slots);
     }
 }
 
