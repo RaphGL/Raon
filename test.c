@@ -18,7 +18,7 @@ struct unit_test {
    for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {                               \
       struct raon_lexer lex = raon_lexer_init(inputs[i].input, strlen(inputs[i].input));           \
       struct raon_token token = lexer_func(&lex);                                                  \
-      printf("Testing %s: ", inputs[i].type);                                                      \
+      printf("Testing lexer `%s`: ", inputs[i].type);                                              \
       assert((token.type != raon_token_type_error) == inputs[i].success);                          \
       printf("OK\n");                                                                              \
    }
@@ -57,25 +57,57 @@ void test_ident_values(void) {
    run_lexer_test(raon_lexer_lex_ident);
 }
 
+#define run_parser_test(parser_type, parser_func, value_assertion)                                 \
+   for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {                               \
+      struct raon_lexer lexer = raon_lexer_init(inputs[i].input, strlen(inputs[i].input));         \
+      struct raon_token first_token = raon_lexer_eat(&lexer);                                      \
+      printf("Testing parser `%s`: ", inputs[i].type);                                             \
+      parser_type value = parser_func(VEC_DEFAULT_ALLOCATOR, &lexer, first_token);                 \
+      assert((value_assertion) == inputs[i].success);                                              \
+      printf("OK\n");                                                                              \
+   }
+
 void test_entries(void) {
-   // TODO
-   struct unit_test inputs[] = {0};
+   struct unit_test inputs[] = {
+      { "int entry", "x = 5", true },
+      { "bool entry", "my_bool = true", true },
+      { "float entry", "my_float = 2.4", true },
+   };
+
+   run_parser_test(struct raon_entry, raon_parse_entry, value.value.type != raon_value_type_error);
 }
 
-void test_array(void) {
-   // TODO
-   struct unit_test inputs[] = {0};
+void test_arrays(void) {
+   struct unit_test inputs[] = {
+      { "int array", "[1, 2, 3, 4]", true },
+      { "float array", "[0.3, 2.1, 5_000.4]", true },
+      { "float trailing comma array", "[0.3, 2.1, 5_000.4,]", true },
+      { "block array", "[{ x = 5 }, { y = 0.5 }, {whatever = true}]", true },
+      { "invalid type array", "[0, 1, 2, true, false, 5]", false },
+   };
+
+   run_parser_test(struct vector_of_raon_value *, raon_parse_array, value != NULL);
 }
 
 void test_blocks(void) {
-   // TODO
-   struct unit_test inputs[] = {0};
+   struct unit_test inputs[] = {
+      { "same type block 1", "{ x = \"hello\", y = \"world\"}", true },
+      { "same type block 2", "{ x = \"hello\", \"whatever\" = true }", true },
+      { "different type block", "{ y = 4, 5 = true}", false },
+      { "sparse array", "{ 0 = true, 1 = false }", true },
+      { "sparse float array", "{ 0.1 = true, 0.2 = false }", false },
+   };
+
+   run_parser_test(struct vector_of_raon_entry *, raon_parse_block, value != NULL);
 }
 
 int main(void) {
    test_num_values();
    test_string_values();
    test_ident_values();
+   test_entries();
+   test_blocks();
+   test_arrays();
 
    char *buf = malloc(BUF_SIZE);
    if (!buf) {
