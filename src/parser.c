@@ -51,7 +51,11 @@ struct raon_entry raon_parse_entry(
       if (!entry.value.block_val) {
          return error_val;
       }
-      vec_push_raon_entry(entry.value.block_val, raon_parse_entry(allocator, lexer, token));
+      struct raon_entry inner_entry = raon_parse_entry(allocator, lexer, token);
+      if (inner_entry.key_type == raon_key_type_error) {
+        return error_val; 
+      }
+      vec_push_raon_entry(entry.value.block_val, inner_entry);
       return entry;
    }
    if (token.type != raon_token_type_equal) {
@@ -286,7 +290,8 @@ struct vector_of_raon_entry *raon_parse(struct vec_allocator allocator, char *st
       token = raon_lexer_eat(&lexer);
 
       if (!raon_is_valid_separator(token, NULL)) {
-         break;
+         raon_free_entries(entries);
+         return NULL;
       }
    }
 

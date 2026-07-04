@@ -72,6 +72,7 @@ void test_entries(void) {
       { "int entry", "x = 5", true },
       { "bool entry", "my_bool = true", true },
       { "float entry", "my_float = 2.4", true },
+      { "valid separator", "x = 1,", true },
    };
 
    run_parser_test(struct raon_entry, raon_parse_entry, value.value.type != raon_value_type_error);
@@ -130,6 +131,7 @@ int main(void) {
    }
 
    struct vector_of_raon_entry *entries = raon_parse(VEC_DEFAULT_ALLOCATOR, buf, strlen(buf));
+   assert(entries != NULL);
    printf("\n\n");
    printf("Ret: %p\n\n", (void *)entries);
 

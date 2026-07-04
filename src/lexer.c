@@ -270,7 +270,7 @@ struct raon_token raon_lexer_eat(struct raon_lexer *self) {
       switch (curr) {
       case '#':
          raon_lexer_ignore_comment(self);
-         break;
+         continue;
 
       case '\n':
          raon_lexer_eat_char(self);
@@ -324,6 +324,8 @@ struct raon_token raon_lexer_eat(struct raon_lexer *self) {
       if (curr_token.type != raon_token_type_error) {
          return curr_token;
       }
+
+      return RAON_ONE_CHAR_TOKEN('\0', raon_token_type_error);
    }
 
    return RAON_ONE_CHAR_TOKEN('\0', raon_token_type_eof);
