@@ -1,9 +1,17 @@
 #!/usr/bin/env python
-import os
 import shutil
 from pathlib import Path
 import subprocess
 import sys
+
+VALID_ARGS = [
+    # commands
+    "release",
+    "debug",
+    "test",
+    # flags
+    "-sanitize",
+]
 
 HELP_MSG = f"""
 HELP:  {sys.argv[0]} <cmd> [flags]
@@ -24,6 +32,7 @@ files = [
     "./src/parser.c",
     "./src/lexer.c",
     "./src/str_slice.c",
+    "./src/raon.c",
 ]
 
 libs = ["m"]
@@ -34,22 +43,39 @@ sanitizers = [
     "leak",
 ]
 
-
-def find_c_compiler() -> str | None:
-    cc = shutil.which("cc")
-    return cc
+def _filc_detected() -> bool:
+    return shutil.which("filcc") is not None or shutil.which("fil++") is not None
 
 
-def find_cpp_compiler() -> str | None:
-    compilers = [
-        shutil.which("g++"),
-        shutil.which("clang++"),
-    ]
+def _is_debug_build() -> bool:
+    return "debug" in sys.argv or "test" in sys.argv
 
+
+def _get_valid_compiler(compilers: list[str | None]) -> str | None:
     valid_compilers = list(filter(lambda comp: comp is not None, compilers))
     if valid_compilers and len(valid_compilers) > 0:
         return valid_compilers[0]
     return None
+
+
+def find_c_compiler() -> str | None:
+    compilers = [
+        shutil.which("filcc") if _is_debug_build() else None,
+        shutil.which("cc"),
+        shutil.which("gcc"),
+        shutil.which("clang"),
+    ]
+    return _get_valid_compiler(compilers)
+
+
+def find_cpp_compiler() -> str | None:
+    compilers = [
+        shutil.which("fil++") if _is_debug_build() else None,
+        shutil.which("c++"),
+        shutil.which("g++"),
+        shutil.which("clang++"),
+    ]
+    return _get_valid_compiler(compilers)
 
 
 def get_flags() -> list[str]:
@@ -57,10 +83,10 @@ def get_flags() -> list[str]:
     if "release" in sys.argv:
         flags.append("-O2")
     else:
-        if "-sanitize" in sys.argv or "debug" in sys.argv:
+        if "-sanitize" in sys.argv or _is_debug_build():
             flags.append("-g")
 
-        if "-sanitize" in sys.argv:
+        if not _filc_detected() and "-sanitize" in sys.argv:
             for sanitizer in sanitizers:
                 flags.append(f"-fsanitize={sanitizer}")
 
@@ -84,6 +110,7 @@ def build_library(cc: str, flags: list[str]) -> str | None:
 
     return libname
 
+
 def run_tests(cc: str, flags: list[str], lib_artifact: str):
     if "test" not in sys.argv:
         return
@@ -95,7 +122,7 @@ def run_tests(cc: str, flags: list[str], lib_artifact: str):
     cpp = find_cpp_compiler()
     res_cpp = None
     if cpp is not None:
-        build_cpp_cmd = [cpp, "test.cpp", lib_artifact, "-o", "raon_test_cpp"]
+        build_cpp_cmd = [cpp,"-std=c++20", "test.cpp", lib_artifact, "-o", "raon_test_cpp"]
         res_cpp = subprocess.run(build_cpp_cmd)
 
     if res_c.returncode == 0:
@@ -109,11 +136,16 @@ def main() -> int:
         print(HELP_MSG)
         return 0
 
+    for arg in sys.argv[1:]:
+        if arg not in VALID_ARGS:
+            print("Invalid Flag.\n")
+            print(HELP_MSG)
+            return 0
+
     cc = find_c_compiler()
     if cc is None:
         print("Failed to find C compiler")
         return 1
-
 
     flags = get_flags()
 
@@ -123,6 +155,8 @@ def main() -> int:
         return 1
 
     run_tests(cc, flags, lib_artifact)
+
+    print(f"\nBuilt with: {cc} {' '.join(flags)}")
 
     return 0
 
